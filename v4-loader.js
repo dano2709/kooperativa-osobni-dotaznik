@@ -1,12 +1,13 @@
 (async()=>{
   try{
-    // Web-only presentation adjustments requested by the user.
     document.querySelector('.hero')?.remove();
     document.querySelector('input[name="signatureMode"][value="upload"]')?.closest('.signature-option')?.remove();
+
     const undo=document.getElementById('undoSignature');
     if(undo){undo.hidden=true;undo.setAttribute('aria-hidden','true');undo.tabIndex=-1;}
     const uploadWrap=document.getElementById('uploadSignatureWrap');
     if(uploadWrap){uploadWrap.hidden=true;uploadWrap.setAttribute('aria-hidden','true');}
+
     const overrides=document.createElement('style');
     overrides.textContent=`
       .stepbar{margin-top:0!important}
@@ -29,18 +30,16 @@
       code=next;
     };
 
-    // Use the supplied official full-colour logo on white, in line with the brand manual.
     replaceOrThrow(
       /  const pdfBrand = \(\) => `[\s\S]*?`;\n  const buildPdfElement/,
       "  const KOOP_LOGO = 'kooperativa-logo.svg';\n  const pdfBrand = () => `<header class=\"pdf-header\"><div class=\"pdf-brand\"><img class=\"pdf-logo\" src=\"${KOOP_LOGO}\" alt=\"Kooperativa Vienna Insurance Group\"></div><div class=\"pdf-doc\">OSOBNÍ DOTAZNÍK</div></header>`;\n  const buildPdfElement",
       'logo PDF'
     );
 
-    // The original source was rendered far outside the viewport, which produced blank PDFs on GitHub Pages.
     replaceOrThrow(
       '.pdf-document{position:absolute;left:-20000px;top:0;width:210mm;background:#fff;color:#17231b;font-family:Arial,Helvetica,sans-serif}',
-      '.pdf-document{position:absolute;left:0;top:0;z-index:2147483647;width:210mm;background:#fff;color:#17231b;font-family:Arial,Helvetica,sans-serif;pointer-events:none}',
-      'viditelný podklad PDF'
+      '.pdf-document{position:static;left:auto;top:auto;width:210mm;background:#fff;color:#17231b;font-family:Arial,Helvetica,sans-serif}',
+      'podklad PDF'
     );
 
     replaceOrThrow(
@@ -54,24 +53,103 @@
     );
 
     replaceOrThrow(
-      /    const element=buildPdfElement\(data\);document\.body\.appendChild\(element\);\n    try\{[\s\S]*?    \}finally\{element\.remove\(\);\}/,
-      `    const element=buildPdfElement(data);document.body.appendChild(element);
+      /  document\.getElementById\('clearSignature'\)\.addEventListener\('click', \(\) => \{[\s\S]*?\n  \}\);/,
+      `  document.getElementById('clearSignature').addEventListener('click', () => {
+    drawSignatureData='';
+    hasDrawn=false;
+    strokeHistory=[];
+    canvasReady=false;
+    setupCanvas();
+    const rect=canvas.getBoundingClientRect(),ctx=canvas.getContext('2d');
+    if(ctx&&rect.width>0){
+      ctx.fillStyle='#fff';
+      ctx.fillRect(0,0,rect.width,180);
+    }
+    updateSignatureReady();
+    updateLastPagePreview();
+  });`,
+      'mazání podpisu'
+    );
+
+    replaceOrThrow(
+      /  const createPdfBlob = async data => \{[\s\S]*?\n  \};\n\n  genBtn/,
+      `  const createPdfBlob = async data => {
+    const renderPage=window.html2canvas;
+    const JsPDF=window.jspdf&&window.jspdf.jsPDF;
+    if(typeof renderPage!=='function'||typeof JsPDF!=='function'){
+      throw new Error('Knihovna pro vytvoření PDF se nenačetla. Obnovte stránku pomocí Ctrl+F5.');
+    }
+
+    const element=buildPdfElement(data);
+    const host=document.createElement('div');
+    host.setAttribute('aria-hidden','true');
+    host.style.cssText='position:fixed;left:0;top:0;width:210mm;height:297mm;z-index:-2147483647;pointer-events:none;background:#fff;overflow:visible;';
+    element.style.position='static';
+    element.style.left='auto';
+    element.style.top='auto';
+    element.style.zIndex='auto';
+    host.appendChild(element);
+    document.body.appendChild(host);
+
     try{
+      if(document.fonts&&document.fonts.ready)await document.fonts.ready;
       await Promise.all([...element.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-      const worker=html2pdf().set({
-        margin:0,
-        filename:'Osobni_dotaznik_Kooperativa.pdf',
-        image:{type:'jpeg',quality:.99},
-        html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0,windowWidth:Math.ceil(element.scrollWidth)},
-        jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
-        pagebreak:{mode:['css','legacy']}
-      }).from(element).toPdf();
-      const blob=await worker.outputPdf('blob');
-      if(!blob||blob.size<1000)throw new Error('Vytvořený PDF soubor je prázdný. Obnovte stránku pomocí Ctrl+F5 a zkuste to znovu.');
+
+      const pages=[...element.querySelectorAll('.pdf-page')];
+      if(pages.length!==3)throw new Error('PDF nemá očekávané tři stránky.');
+      pages.forEach(page=>{page.style.display='none';page.style.pageBreakAfter='auto';});
+
+      const pdf=new JsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+      for(let index=0;index<pages.length;index++){
+        const page=pages[index];
+        page.style.display='block';
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+
+        const canvasImage=await renderPage(page,{
+          scale:2,
+          useCORS:true,
+          allowTaint:false,
+          backgroundColor:'#ffffff',
+          logging:false,
+          scrollX:0,
+          scrollY:0,
+          windowWidth:Math.ceil(page.scrollWidth),
+          windowHeight:Math.ceil(page.scrollHeight)
+        });
+
+        if(!canvasImage||canvasImage.width<500||canvasImage.height<700){
+          throw new Error(`Stranu ${index+1} se nepodařilo vykreslit.`);
+        }
+
+        const sampleCanvas=document.createElement('canvas');
+        sampleCanvas.width=Math.min(220,canvasImage.width);
+        sampleCanvas.height=Math.min(220,canvasImage.height);
+        const sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
+        sampleCtx.drawImage(canvasImage,0,0,sampleCanvas.width,sampleCanvas.height);
+        const pixels=sampleCtx.getImageData(0,0,sampleCanvas.width,sampleCanvas.height).data;
+        let nonWhite=0;
+        for(let p=0;p<pixels.length;p+=16){
+          if(pixels[p]<245||pixels[p+1]<245||pixels[p+2]<245)nonWhite++;
+        }
+        if(nonWhite<20)throw new Error(`Strana ${index+1} byla vykreslena prázdná.`);
+
+        if(index>0)pdf.addPage('a4','portrait');
+        const image=canvasImage.toDataURL('image/jpeg',0.97);
+        pdf.addImage(image,'JPEG',0,0,210,297,undefined,'FAST');
+        page.style.display='none';
+      }
+
+      const blob=pdf.output('blob');
+      if(!blob||blob.size<15000)throw new Error('Vytvořený PDF soubor je prázdný nebo neúplný.');
       return blob;
-    }finally{element.remove();}`,
-      'generování PDF'
+    }finally{
+      host.remove();
+    }
+  };
+
+  genBtn`,
+      'generování PDF po jednotlivých stránkách'
     );
 
     (0,eval)(code);
