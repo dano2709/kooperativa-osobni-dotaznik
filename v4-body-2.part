@@ -1,0 +1,42 @@
+r="např. 123456789" required=""/></div>
+<div class="field"><label for="bankCode">Kód banky <span class="req">*</span></label><input id="bankCode" inputmode="numeric" maxlength="4" name="bankCode" placeholder="např. 0800" required=""/></div>
+<input id="bankAccount" name="bankAccount" type="hidden"/>
+</div>
+<div class="actions"><button class="btn ghost" id="clearDraft" type="button">Vymazat rozepsané údaje</button><div class="actions-right"><button class="btn primary next" type="button">Pokračovat</button></div></div>
+</div>
+</section>
+<section class="panel" data-panel="1">
+<div class="panel-head"><div><h2>Rodinní příslušníci</h2><p>Údaje o manželovi/manželce, dětech a ostatních vyživovaných osobách.</p></div></div>
+<div class="panel-body">
+<div class="grid">
+<div class="subsection field full">Manžel / manželka</div>
+<div class="field"><label for="spouseName">Jméno, příjmení</label><input id="spouseName" name="spouseName"/></div>
+<div class="field"><label for="spousePersonalNumber">Rodné číslo</label><input class="personal-number" id="spousePersonalNumber" inputmode="numeric" maxlength="11" name="spousePersonalNumber"/></div>
+<div class="subsection field full">Děti</div>
+<div class="repeat-wrap"><div id="childrenRows"></div><button class="add-btn" id="addChild" type="button">+ Přidat dítě</button></div>
+<div class="subsection field full" style="margin-top:10px">Ostatní vyživované osoby</div>
+<div class="repeat-wrap"><div id="dependentRows"></div><button class="add-btn" id="addDependent" type="button">+ Přidat vyživovanou osobu</button></div>
+</div>
+<div class="actions"><button class="btn secondary prev" type="button">Zpět</button><div class="actions-right"><button class="btn primary next" type="button">Pokračovat</button></div></div>
+</div>
+</section>
+<section class="panel" data-panel="2">
+<div class="panel-head"><div><h2>Ostatní údaje</h2><p>Vzdělání, oprávnění a další údaje vyžadované osobním dotazníkem.</p></div></div>
+<div class="panel-body">
+<div class="grid">
+<div class="field"><label for="education">Nejvyšší dokončené vzdělání (obor) <span class="req">*</span></label><input id="education" name="education" required=""/></div>
+<div class="field"><label for="educationYear">V roce</label><input id="educationYear" inputmode="numeric" maxlength="4" name="educationYear" placeholder="např. 2026"/></div>
+<div class="field full"><span class="label">Řidičský průkaz</span><div class="choice required-choice" data-radio-group="drivingLicence"><label><input name="drivingLicence" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="drivingLicence" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field full"><span class="label">Je nebo byla vůči Vám vedena exekuce, insolvenční řízení?</span><div class="choice required-choice" data-radio-group="executionInsolvency"><label><input name="executionInsolvency" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="executionInsolvency" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field full"><span class="label">Je v Kooperativě pojišťovně zaměstnána Vaše osoba blízká v přímé podřízenosti/nadřízenosti vůči Vám?</span><div class="choice required-choice" data-radio-group="closePersonEmployed"><label><input name="closePersonEmployed" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="closePersonEmployed" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field full conditional" id="closePersonDetailsWrap"><label for="closePersonDetails">Jméno a příjmení osoby blízké a vztah této osoby k Vám</label><textarea data-required-when="closePersonEmployed:ANO" id="closePersonDetails" name="closePersonDetails"></textarea></div>
+<div class="field full"><span class="label">Máte ještě jinou výdělečnou činnost, která je shodná s předmětem činnosti zaměstnavatele?</span><div class="choice required-choice" data-radio-group="otherActivity"><label><input name="otherActivity" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="otherActivity" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field full conditional" id="activityTypeWrap"><label for="activityType">Druh činnosti</label><textarea data-required-when="otherActivity:ANO" id="activityType" name="activityType"></textarea></div>
+<div class="field third"><span class="label">Pobíráte důchod?</span><div class="choice required-choice" data-radio-group="pension"><label><input name="pension" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="pension" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field third conditional pension-extra"><label for="pensionType">Druh důchodu</label><input data-required-when="pension:ANO" id="pensionType" name="pensionType"/></div>
+<div class="field third conditional pension-extra"><label for="pensionGrantedDate">Datum přiznání</label><input class="date-input" data-required-when="pension:ANO" id="pensionGrantedDate" inputmode="numeric" maxlength="10" name="pensionGrantedDate" placeholder="DD.MM.RRRR"/></div>
+<div class="field third"><span class="label">Máte zdravotní postižení?</span><div class="choice required-choice" data-radio-group="disability"><label><input name="disability" required="" type="radio" value="ANO"/><span>ANO</span></label><label><input name="disability" type="radio" value="NE"/><span>NE</span></label></div></div>
+<div class="field third conditional disability-extra"><label for="disabilityType">Druh</label><input data-required-when="disability:ANO" id="disabilityType" name="disabilityType"/></div>
+<div class="field third conditional disability-extra"><label for="disabilityDecisionDate">Datum přiznání / výměry</label><input class="date-input" data-required-when="disability:ANO" id="disabilityDecisionDate" inputmode="numeric" maxlength="10" name="disabilityDecisionDate" placeholder="DD.MM.RRRR"/></div>
+</div>
+<div cla
