@@ -1,0 +1,36 @@
+all>Podepište se myší, touchpadem nebo prstem přímo v aplikaci.</small></span></label>
+<label class="signature-option"><input name="signatureMode" type="radio" value="upload"/><span><strong>Vložit obrázek podpisu</strong><small>Nahrajte vlastní obrázek ve formátu PNG nebo JPG, maximálně 2 MB.</small></span></label>
+<label class="signature-option"><input name="signatureMode" type="radio" value="print"/><span><strong>Podepsat až po vytištění</strong><small>V PDF zůstane připravené prázdné místo pro ruční podpis.</small></span></label>
+</div>
+<div class="signature-method conditional" id="drawSignatureWrap">
+<label for="signatureCanvas">Elektronický podpis</label>
+<canvas aria-label="Plocha pro nakreslení podpisu" class="signature-canvas" id="signatureCanvas"></canvas>
+<div class="signature-toolbar"><span class="help">Podpis se vloží na poslední stránku PDF.</span><div class="toolbar-buttons"><button class="btn secondary" id="undoSignature" type="button">Zpět o tah</button><button class="btn secondary" id="clearSignature" type="button">Vymazat podpis</button></div></div>
+</div>
+<div class="signature-method conditional" id="uploadSignatureWrap">
+<label for="signatureFile">Obrázek podpisu</label><input accept="image/png,image/jpeg" id="signatureFile" type="file"/>
+<div class="help">Po načtení lze podpis automaticky oříznout a odstranit bílé pozadí.</div>
+<div class="upload-tools"><button class="btn secondary" disabled="" id="cropSignature" type="button">Automaticky oříznout</button><label class="compact-check inline"><input checked="" id="removeWhiteBackground" type="checkbox"/><span>Odstranit bílé pozadí</span></label></div>
+<img alt="Náhled vloženého podpisu" class="signature-preview" id="signaturePreview"/>
+</div>
+<div class="signature-method conditional" id="printSignatureWrap">
+<div class="confirm-row"><input id="printSignatureConfirmed" type="checkbox"/><label for="printSignatureConfirmed">Beru na vědomí, že vytvořené PDF zatím nebude podepsané, a zavazuji se dokument podepsat ručně po vytištění.</label></div>
+</div>
+<div aria-label="Náhled poslední strany PDF" class="last-page-preview field full" id="lastPagePreview">
+<div class="preview-brand">Kooperativa <span>OSOBNÍ DOTAZNÍK</span></div>
+<h3>Informace o zpracování osobních údajů</h3>
+<p>Poslední stránka bude obsahovat úplné znění informací, prohlášení, místo, datum a zvolený způsob podpisu.</p>
+<div class="preview-declaration">Prohlašuji, že jsem nic nezamlčel/a a všechny mnou uvedené údaje jsou pravdivé.</div>
+<div class="preview-signature"><span>V <b id="previewPlace">—</b></span><span>dne <b id="previewDate">—</b></span><span class="preview-signature-box" id="previewSignature">podpis</span></div>
+</div>
+<div class="confirm-row"><input id="declarationConfirmed" type="checkbox"/><label for="declarationConfirmed"><strong>Potvrzuji, že jsem se seznámil/a s výše uvedenými informacemi a že všechny mnou uvedené údaje jsou pravdivé.</strong></label></div>
+<div class="ready-note" id="readyNote">Pro vytvoření PDF zvolte způsob podpisu a potvrďte prohlášení.</div>
+</div>
+<div aria-live="polite" class="status" id="status" role="status"></div>
+<div class="actions"><button class="btn secondary prev" type="button">Zpět</button><div class="actions-right print-actions"><button class="btn pdf" disabled="" id="generatePdf" type="button"><span aria-hidden="true">▣</span> Vytvořit PDF</button><a class="btn secondary result-action" href="#" id="previewPdf" target="_blank">Náhled PDF</a><a class="btn secondary result-action" href="#" id="downloadPdf">Stáhnout PDF</a><a class="btn primary result-action" href="#" id="printPdf" target="_blank">Vytisknout</a></div></div>
+</div>
+</section>
+</form>
+<p class="footer-note">Aplikace ukládá rozepsané údaje pouze do místního úložiště prohlížeče. Při generování PDF jsou data zpracována přímo v tomto prohlížeči.<br/><button class="btn ghost" id="shutdownApp" style="margin-top:8px" type="button">Ukončit aplikaci</button></p>
+</main>
+
