@@ -1,0 +1,74 @@
+() => {
+    try{
+      const raw=localStorage.getItem(storageKey);if(!raw)return;
+      const data=JSON.parse(raw);restoredDraft=true;
+      if(data.bankAccount&&!data.bankAccountNumber){const parts=String(data.bankAccount).split('/');data.bankAccountNumber=parts[0]||'';data.bankCode=parts[1]||'';}
+      for(const [k,v] of Object.entries(data)){
+        if(['children','dependents','signatureData','declarationConfirmed','printSignatureConfirmed','sameAsPermanent'].includes(k))continue;
+        const radios=form.querySelectorAll(`input[type="radio"][name="${CSS.escape(k)}"]`);if(radios.length){radios.forEach(r=>r.checked=r.value===v);continue;}
+        const el=form.elements[k];if(el&&typeof v==='string')el.value=v;
+      }
+      declarationConfirmed.checked=Boolean(data.declarationConfirmed);printSignatureConfirmed.checked=Boolean(data.printSignatureConfirmed);sameAsPermanent.checked=Boolean(data.sameAsPermanent);
+      children=Array.isArray(data.children)&&data.children.length?data.children:[{name:'',personalNumber:''}];
+      dependents=Array.isArray(data.dependents)&&data.dependents.length?data.dependents:[{name:'',personalNumber:''}];
+    }catch(_){}
+  };
+  const clearSignatureState=()=>{drawSignatureData='';uploadSignatureData='';rawUploadImage=null;hasDrawn=false;canvasReady=false;strokeHistory=[];signatureFile.value='';signaturePreview.classList.remove('show');signaturePreview.removeAttribute('src');cropSignatureBtn.disabled=true;};
+  document.getElementById('clearDraft').addEventListener('click',()=>{
+    if(!confirm('Opravdu chcete vymazat všechny rozepsané údaje?'))return;
+    form.reset();children=[{name:'',personalNumber:''}];dependents=[{name:'',personalNumber:''}];clearSignatureState();localStorage.removeItem(storageKey);
+    document.getElementById('signatureDate').value=todayCZ();syncBankAccount();syncCorrespondence();renderRows('child');renderRows('dependent');updateClose();updateActivity();updatePension();updateDisability();updateSignatureMode();updateProgress();updateSignatureReady();updateReview();hideResultActions();status.className='status';status.innerHTML='';showStep(0,{skipValidation:true});
+  });
+
+  const requiredProgressItems = () => {
+    const els=[...form.querySelectorAll('[required]:not([type="radio"])')].filter(visible);
+    const conditional=[...form.querySelectorAll('[data-required-when]')].filter(el=>visible(el)&&isConditionallyRequired(el));
+    const groups=[...form.querySelectorAll('.required-choice')];
+    return {els:[...new Set([...els,...conditional])],groups};
+  };
+  const updateProgress = () => {
+    const {els,groups}=requiredProgressItems();let total=els.length+groups.length+3,filled=els.filter(el=>cleanValue(el.value)).length;
+    filled+=groups.filter(g=>form.querySelector(`input[name="${g.dataset.radioGroup}"]:checked`)).length;
+    if(selectedSignatureMode())filled++;if(declarationConfirmed.checked)filled++;if(isValidCZDate(document.getElementById('signatureDate').value))filled++;
+    const pct=total?Math.min(100,Math.round(filled/total*100)):0;document.getElementById('progressBar').style.width=pct+'%';document.getElementById('progressText').textContent=pct+' % vyplněno';
+  };
+
+  const validateAll = () => {
+    if(!validatePanelsThrough(2,true))return false;
+    const date=document.getElementById('signatureDate');
+    if(!validateField(date)){showStep(4,{skipValidation:true});setTimeout(()=>date.focus(),150);return false;}
+    if(!signatureComplete()){
+      showStep(4,{skipValidation:true});readyNote.classList.remove('ok');readyNote.textContent='Dokončete podpis nebo potvrďte, že dokument podepíšete ručně po vytištění.';return false;
+    }
+    return true;
+  };
+  const showStatus=(type,html)=>{status.className=`status show ${type}`;status.innerHTML=html;};
+  const hideResultActions=()=>[previewPdf,downloadPdf,printPdf].forEach(a=>a.classList.remove('show'));
+
+  let generatedPdfUrl = '';
+  const shown = value => cleanValue(value) || 'Neuvedeno';
+  const answer = value => cleanValue(value) || 'Neuvedeno';
+  const pdfKV = (label, value, full=false) => `<div class="pdf-kv${full?' full':''}"><span>${escapeHTML(label)}</span><strong>${escapeHTML(shown(value))}</strong></div>`;
+  const pdfPeople = rows => {
+    const list=(rows||[]).filter(r=>cleanValue(r.name)||cleanValue(r.personalNumber));
+    if(!list.length)return '<div class="pdf-empty">Neuvedeno</div>';
+    return `<table class="pdf-table"><thead><tr><th>Jméno, příjmení</th><th>Rodné číslo</th></tr></thead><tbody>${list.map(r=>`<tr><td>${escapeHTML(shown(r.name))}</td><td>${escapeHTML(shown(r.personalNumber))}</td></tr>`).join('')}</tbody></table>`;
+  };
+  const pdfBrand = () => `<header class="pdf-header"><div class="pdf-brand"><svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 5 43 27H34L30 20l-4 7h-9L30 5Z" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/><path d="m12 38 13-22 4 8-4 7 4 7-4 8-13-8Z" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/><path d="m48 38-26 0 5-8h8l4-7 9 15Z" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/></svg><div><b>Kooperativa</b><i></i><small>VIENNA INSURANCE GROUP</small></div></div><div class="pdf-doc">OSOBNÍ DOTAZNÍK</div></header>`;
+  const buildPdfElement = data => {
+    const root=document.createElement('div');
+    root.className='pdf-document';
+    const signatureImage=data.signatureData?`<img src="${data.signatureData}" alt="Podpis">`:'<span class="pdf-sign-line"></span>';
+    const signatureNote=data.signatureMode==='print'?'Dokument bude podepsán ručně po vytištění.':'Elektronický podpis je vložen v dokumentu.';
+    const legal=document.getElementById('legalCopy').innerHTML;
+    root.innerHTML=`
+      <style>
+        .pdf-document{position:absolute;left:-20000px;top:0;width:210mm;background:#fff;color:#17231b;font-family:Arial,Helvetica,sans-serif}
+        .pdf-page{width:210mm;min-height:297mm;padding:0 12mm 10mm;background:#fff;page-break-after:always;overflow:hidden}
+        .pdf-page:last-child{page-break-after:auto}
+        .pdf-header{height:34mm;margin:0 -12mm 7mm;padding:8mm 12mm 6mm;background:#00843D;color:#fff;display:flex;align-items:center;justify-content:space-between;position:relative}
+        .pdf-header:after{content:"";position:absolute;left:12mm;right:12mm;bottom:4mm;height:.8mm;background:#FFCD00}
+        .pdf-brand{display:flex;align-items:center;gap:4mm}.pdf-brand svg{width:17mm;height:17mm}.pdf-brand b{display:block;font-size:19pt;line-height:1}.pdf-brand i{display:block;width:29mm;height:.8mm;background:#E2000F;margin:1.4mm 0}.pdf-brand small{display:block;font-size:6pt;letter-spacing:.6pt}
+        .pdf-doc{font-size:9pt;font-weight:700;letter-spacing:.5pt}
+        .pdf-title{font-size:20pt;margin:0 0 1.5mm;color:#00573F}.pdf-sub{font-size:8pt;color:#66726B;margin:0 0 5mm}
+        .pdf-section{margin:0 0 5mm}.pdf-section h2{margin:0 0 2.5mm;padding:2.2mm 3mm;background:#E8F5EC;border-left:2mm solid #00843D;color:#00573F;font-size:12pt
