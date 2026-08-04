@@ -1,0 +1,45 @@
+ytvoření PDF se nenačetla. Obnovte stránku a zkuste to znovu.');
+    const element=buildPdfElement(data);document.body.appendChild(element);
+    try{
+      const worker=html2pdf().set({
+        margin:0,
+        filename:'Osobni_dotaznik_Kooperativa.pdf',
+        image:{type:'jpeg',quality:.98},
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
+        pagebreak:{mode:['css','legacy']}
+      }).from(element).toPdf();
+      return await worker.outputPdf('blob');
+    }finally{element.remove();}
+  };
+
+  genBtn.addEventListener('click',async()=>{
+    if(!validateAll()){showStatus('err','Doplňte označené údaje. U každého chybného pole je uvedeno konkrétní vysvětlení.');return;}
+    genBtn.disabled=true;hideResultActions();showStatus('wait','Připravuji PDF včetně poslední stránky s informacemi o zpracování osobních údajů...');
+    try{
+      const blob=await createPdfBlob(formDataObject());
+      if(generatedPdfUrl)URL.revokeObjectURL(generatedPdfUrl);
+      generatedPdfUrl=URL.createObjectURL(blob);
+      previewPdf.href=generatedPdfUrl;
+      downloadPdf.href=generatedPdfUrl;downloadPdf.download='Osobni_dotaznik_Kooperativa.pdf';
+      printPdf.href=generatedPdfUrl;
+      [previewPdf,downloadPdf,printPdf].forEach(a=>a.classList.add('show'));
+      showStatus('ok','PDF bylo vytvořeno. Můžete zobrazit náhled, soubor stáhnout nebo rovnou otevřít tisk.');
+    }catch(err){showStatus('err',`PDF se nepodařilo vytvořit: ${escapeHTML(err.message||err)}`);}finally{updateSignatureReady();}
+  });
+
+  document.getElementById('toggleLegal').addEventListener('click',(e)=>{
+    const legal=document.getElementById('legalCopy'),expanded=!legal.classList.contains('compact');legal.classList.toggle('compact',expanded);e.currentTarget.textContent=expanded?'Otevřít celé znění':'Skrýt celé znění';
+  });
+  document.getElementById('shutdownApp').addEventListener('click',()=>{
+    if(!confirm('Opravdu chcete ukončit aplikaci?'))return;
+    try{window.close();}catch(_){}
+    document.body.innerHTML='<main style="font-family:Arial,sans-serif;max-width:680px;margin:80px auto;padding:30px"><h1 style="color:#00843D">Aplikace byla ukončena</h1><p>Tuto kartu můžete zavřít. Formulář znovu otevřete pomocí adresy webové stránky.</p></main>';
+  });
+
+  form.addEventListener('change',()=>{syncBankAccount();saveDraft();updateProgress();updateSignatureReady();updateLastPagePreview();if(current===3)updateReview();});
+  restoreDraft();
+  if(!document.getElementById('signatureDate').value)document.getElementById('signatureDate').value=todayCZ();
+  syncBankAccount();syncCorrespondence();renderRows('child');renderRows('dependent');updateClose();updateActivity();updatePension();updateDisability();updateSignatureMode();updateProgress();updateSignatureReady();updateReview();updateLastPagePreview();setStepStatus();
+})();
+
