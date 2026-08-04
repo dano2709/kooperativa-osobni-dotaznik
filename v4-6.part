@@ -1,0 +1,72 @@
+}
+        .pdf-grid{display:grid;grid-template-columns:1fr 1fr;gap:2mm 4mm}.pdf-kv{border-bottom:.25mm solid #D8E3DC;padding:1.5mm 0;min-height:10mm}.pdf-kv.full{grid-column:1/-1}.pdf-kv span{display:block;font-size:6.7pt;color:#66726B;text-transform:uppercase;font-weight:700;letter-spacing:.15pt}.pdf-kv strong{display:block;font-size:9pt;font-weight:600;margin-top:.7mm;overflow-wrap:anywhere}
+        .pdf-note{margin-top:3mm;padding:2.5mm 3mm;border-left:1.3mm solid #FFCD00;background:#FFF9DF;font-size:7.2pt;line-height:1.35}
+        .pdf-table{width:100%;border-collapse:collapse;font-size:8pt}.pdf-table th{background:#E8F5EC;color:#00573F;text-align:left}.pdf-table th,.pdf-table td{border:.25mm solid #C9D8CF;padding:1.8mm 2mm}.pdf-empty{font-size:8pt;color:#7A857F;font-style:italic;padding:2mm 0}
+        .pdf-question{display:grid;grid-template-columns:1fr 26mm;gap:4mm;align-items:start;padding:2.1mm 0;border-bottom:.25mm solid #D8E3DC;font-size:8.2pt}.pdf-question b{text-align:center;color:#00573F}
+        .pdf-legal{font-size:6.35pt;line-height:1.12;color:#111}.pdf-legal .lead{font-weight:700}.pdf-legal h3{font-size:7.1pt;margin:2.2mm 0 1mm}.pdf-legal h4{font-size:6.7pt;margin:1.6mm 0 .7mm}.pdf-legal p{margin:0 0 1.1mm;text-align:justify}.pdf-legal .confirmation{font-weight:700}
+        .pdf-signature-area{display:grid;grid-template-columns:1fr 1fr 1.8fr;gap:5mm;align-items:end;margin-top:3mm;font-size:7.4pt}.pdf-signature-cell{border-bottom:.25mm solid #222;min-height:12mm;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1mm}.pdf-signature-cell img{max-width:55mm;max-height:14mm;object-fit:contain}.pdf-sign-line{display:block;width:100%;height:10mm}.pdf-signature-note{margin-top:1.4mm;font-size:6.5pt;color:#66726B;text-align:right}
+        .pdf-footer{margin-top:4mm;border-top:.7mm solid #00843D;padding-top:1.5mm;font-size:6pt;color:#66726B;display:flex;justify-content:space-between}
+      </style>
+      <section class="pdf-page">
+        ${pdfBrand()}
+        <h1 class="pdf-title">Osobní údaje zaměstnance</h1>
+        <p class="pdf-sub">Údaje vyplněné v elektronickém osobním dotazníku.</p>
+        <section class="pdf-section"><h2>Osobní údaje</h2><div class="pdf-grid">
+          ${pdfKV('Příjmení, jméno, titul',data.fullName,true)}
+          ${pdfKV('Předchozí příjmení',data.previousSurname)}
+          ${pdfKV('Rodné příjmení',data.birthSurname)}
+          ${pdfKV('Rodinný stav',data.maritalStatus)}
+          ${pdfKV('Státní občanství',data.citizenship)}
+          ${pdfKV('Zdravotní pojišťovna',data.healthInsurance)}
+          ${pdfKV('Rodné číslo',data.personalNumber)}
+          ${pdfKV('Den, měsíc, rok narození',data.birthDate)}
+          ${pdfKV('Místo narození, okres (stát)',data.birthPlace,true)}
+          ${pdfKV('Trvalé bydliště',data.permanentAddress)}
+          ${pdfKV('PSČ',data.permanentPostal)}
+          ${pdfKV('Telefonní číslo',data.phone)}
+          ${pdfKV('Korespondenční adresa',data.correspondenceAddress)}
+          ${pdfKV('PSČ korespondenční adresy',data.correspondencePostal)}
+          ${pdfKV('ID datové schránky',data.dataBox)}
+          ${pdfKV('E-mailová adresa',data.email,true)}
+          ${pdfKV('Číslo bankovního účtu, kód banky',data.bankAccount,true)}
+        </div>
+        <div class="pdf-note"><strong>Informace o použití soukromé e-mailové adresy pro pracovněprávní účely.</strong><br>Zaměstnancem uvedená soukromá e-mailová adresa je určena pro zasílání pracovněprávních dokumentů uvedených v § 21 odst. 1 zákona č. 262/2006 Sb., zákoník práce, ve znění pozdějších předpisů, jsou-li uzavřeny elektronicky.</div></section>
+        <div class="pdf-footer"><span>Kooperativa pojišťovna, a.s., Vienna Insurance Group</span><span>Strana 1 / 3</span></div>
+      </section>
+      <section class="pdf-page">
+        ${pdfBrand()}
+        <section class="pdf-section"><h2>Rodinní příslušníci</h2>
+          <div class="pdf-grid">${pdfKV('Manžel / manželka – jméno a příjmení',data.spouseName)}${pdfKV('Manžel / manželka – rodné číslo',data.spousePersonalNumber)}</div>
+          <h3 style="font-size:9pt;color:#00573F;margin:4mm 0 1.5mm">Děti</h3>${pdfPeople(data.children)}
+          <h3 style="font-size:9pt;color:#00573F;margin:4mm 0 1.5mm">Ostatní vyživované osoby</h3>${pdfPeople(data.dependents)}
+        </section>
+        <section class="pdf-section"><h2>Ostatní údaje</h2>
+          <div class="pdf-grid">${pdfKV('Nejvyšší dokončené vzdělání (obor)',data.education)}${pdfKV('V roce',data.educationYear)}</div>
+          <div class="pdf-question"><span>Řidičský průkaz</span><b>${escapeHTML(answer(data.drivingLicence))}</b></div>
+          <div class="pdf-question"><span>Je nebo byla vůči Vám vedena exekuce, insolvenční řízení?</span><b>${escapeHTML(answer(data.executionInsolvency))}</b></div>
+          <div class="pdf-question"><span>Je v Kooperativě zaměstnána Vaše osoba blízká v přímé podřízenosti/nadřízenosti vůči Vám?</span><b>${escapeHTML(answer(data.closePersonEmployed))}</b></div>
+          ${data.closePersonEmployed==='ANO'?pdfKV('Jméno, příjmení a vztah osoby blízké',data.closePersonDetails,true):''}
+          <div class="pdf-question"><span>Máte jinou výdělečnou činnost shodnou s předmětem činnosti zaměstnavatele?</span><b>${escapeHTML(answer(data.otherActivity))}</b></div>
+          ${data.otherActivity==='ANO'?pdfKV('Druh činnosti',data.activityType,true):''}
+          <div class="pdf-question"><span>Pobíráte důchod?</span><b>${escapeHTML(answer(data.pension))}</b></div>
+          ${data.pension==='ANO'?`<div class="pdf-grid">${pdfKV('Druh důchodu',data.pensionType)}${pdfKV('Datum přiznání',data.pensionGrantedDate)}</div>`:''}
+          <div class="pdf-question"><span>Máte zdravotní postižení?</span><b>${escapeHTML(answer(data.disability))}</b></div>
+          ${data.disability==='ANO'?`<div class="pdf-grid">${pdfKV('Druh zdravotního postižení',data.disabilityType)}${pdfKV('Datum přiznání / výměry',data.disabilityDecisionDate)}</div>`:''}
+        </section>
+        <div class="pdf-footer"><span>Kooperativa pojišťovna, a.s., Vienna Insurance Group</span><span>Strana 2 / 3</span></div>
+      </section>
+      <section class="pdf-page">
+        ${pdfBrand()}
+        <div class="pdf-legal">${legal}</div>
+        <div class="pdf-signature-area">
+          <div><span>V</span><div class="pdf-signature-cell">${escapeHTML(shown(data.signaturePlace))}</div></div>
+          <div><span>dne</span><div class="pdf-signature-cell">${escapeHTML(shown(data.signatureDate))}</div></div>
+          <div><span>podpis</span><div class="pdf-signature-cell">${signatureImage}</div></div>
+        </div>
+        <div class="pdf-signature-note">${escapeHTML(signatureNote)}</div>
+        <div class="pdf-footer"><span>Kooperativa pojišťovna, a.s., Vienna Insurance Group</span><span>Strana 3 / 3</span></div>
+      </section>`;
+    return root;
+  };
+  const createPdfBlob = async data => {
+    if(typeof html2pdf!=='function')throw new Error('Knihovna pro v
