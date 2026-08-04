@@ -1,0 +1,93 @@
+ta=canvas.toDataURL('image/png'); updateSignatureReady(); updateLastPagePreview();
+  };
+  canvas.addEventListener('pointerup',finishDrawing); canvas.addEventListener('pointercancel',finishDrawing);
+  document.getElementById('undoSignature').addEventListener('click', () => {
+    const previous=strokeHistory.pop();
+    if(!previous)return;
+    if(previous.had){restoreCanvasImage(previous.data);}else{
+      setupCanvas();const rect=canvas.getBoundingClientRect(),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,rect.width,180);hasDrawn=false;drawSignatureData='';updateSignatureReady();updateLastPagePreview();
+    }
+  });
+  document.getElementById('clearSignature').addEventListener('click', () => {
+    setupCanvas(); const rect=canvas.getBoundingClientRect(),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,rect.width,180);
+    hasDrawn=false;drawSignatureData='';strokeHistory=[];updateSignatureReady();updateLastPagePreview();
+  });
+
+  const processUpload = (autoCrop=true) => {
+    if(!rawUploadImage)return;
+    const maxW=1200,maxH=500;
+    const scale=Math.min(1,maxW/rawUploadImage.naturalWidth,maxH/rawUploadImage.naturalHeight);
+    const w=Math.max(1,Math.round(rawUploadImage.naturalWidth*scale)),h=Math.max(1,Math.round(rawUploadImage.naturalHeight*scale));
+    const source=document.createElement('canvas');source.width=w;source.height=h;
+    const sctx=source.getContext('2d',{willReadFrequently:true});sctx.drawImage(rawUploadImage,0,0,w,h);
+    let image=sctx.getImageData(0,0,w,h),data=image.data;
+    let minX=w,minY=h,maxX=-1,maxY=-1;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=(y*w+x)*4,r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+      const white=r>245&&g>245&&b>245;
+      if(removeWhiteBackground.checked && white)data[i+3]=0;
+      if(a>18 && !white){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
+    }
+    sctx.putImageData(image,0,0);
+    let sx=0,sy=0,sw=w,sh=h;
+    if(autoCrop && maxX>=minX){const pad=8;sx=Math.max(0,minX-pad);sy=Math.max(0,minY-pad);sw=Math.min(w-sx,maxX-minX+1+pad*2);sh=Math.min(h-sy,maxY-minY+1+pad*2);}
+    const out=document.createElement('canvas');out.width=sw;out.height=sh;out.getContext('2d').drawImage(source,sx,sy,sw,sh,0,0,sw,sh);
+    uploadSignatureData=out.toDataURL('image/png');signaturePreview.src=uploadSignatureData;signaturePreview.classList.add('show');updateSignatureReady();updateLastPagePreview();
+  };
+  signatureFile.addEventListener('change', () => {
+    uploadSignatureData='';rawUploadImage=null;signaturePreview.classList.remove('show');signaturePreview.removeAttribute('src');cropSignatureBtn.disabled=true;
+    const file=signatureFile.files?.[0];if(!file){updateSignatureReady();return;}
+    if(!['image/png','image/jpeg'].includes(file.type)||file.size>2*1024*1024){signatureFile.value='';showStatus('err','Obrázek podpisu musí být PNG nebo JPG a nesmí být větší než 2 MB.');updateSignatureReady();return;}
+    const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{rawUploadImage=img;cropSignatureBtn.disabled=false;processUpload(true);status.className='status';status.innerHTML='';};img.onerror=()=>showStatus('err','Obrázek podpisu se nepodařilo načíst.');img.src=String(reader.result||'');};reader.onerror=()=>showStatus('err','Obrázek podpisu se nepodařilo načíst.');reader.readAsDataURL(file);
+  });
+  cropSignatureBtn.addEventListener('click',()=>processUpload(true));
+  removeWhiteBackground.addEventListener('change',()=>processUpload(true));
+
+  const selectedSignatureMode = () => form.querySelector('input[name="signatureMode"]:checked')?.value || '';
+  const updateSignatureMode = () => {
+    const mode=selectedSignatureMode();
+    document.getElementById('drawSignatureWrap').classList.toggle('visible',mode==='draw');
+    document.getElementById('uploadSignatureWrap').classList.toggle('visible',mode==='upload');
+    document.getElementById('printSignatureWrap').classList.toggle('visible',mode==='print');
+    if(mode==='draw')requestAnimationFrame(setupCanvas);
+    saveDraft();updateProgress();updateSignatureReady();updateLastPagePreview();
+  };
+  form.querySelectorAll('input[name="signatureMode"]').forEach(r=>r.addEventListener('change',updateSignatureMode));
+  declarationConfirmed.addEventListener('change',()=>{saveDraft();updateProgress();updateSignatureReady()});
+  printSignatureConfirmed.addEventListener('change',()=>{saveDraft();updateProgress();updateSignatureReady();updateLastPagePreview()});
+
+  const signatureComplete = () => {
+    const mode=selectedSignatureMode();
+    if(!declarationConfirmed.checked||!isValidCZDate(document.getElementById('signatureDate').value))return false;
+    if(mode==='draw')return Boolean(drawSignatureData&&hasDrawn);
+    if(mode==='upload')return Boolean(uploadSignatureData);
+    if(mode==='print')return printSignatureConfirmed.checked;
+    return false;
+  };
+  function updateSignatureReady(){
+    const ready=signatureComplete();genBtn.disabled=!ready;readyNote.classList.toggle('ok',ready);
+    readyNote.textContent=ready?'Potvrzení je dokončeno. Nyní můžete vytvořit PDF.':'Pro vytvoření PDF zvolte způsob podpisu, doplňte platné datum ve formátu DD.MM.RRRR a potvrďte prohlášení.';
+  }
+  function updateLastPagePreview(){
+    const place=cleanValue(document.getElementById('signaturePlace').value)||'—';
+    const date=cleanValue(document.getElementById('signatureDate').value)||'—';
+    document.getElementById('previewPlace').textContent=place;document.getElementById('previewDate').textContent=date;
+    const box=document.getElementById('previewSignature'),mode=selectedSignatureMode();box.innerHTML='';
+    const data=mode==='draw'?drawSignatureData:mode==='upload'?uploadSignatureData:'';
+    if(data){const img=document.createElement('img');img.src=data;img.alt='Náhled podpisu';box.appendChild(img);}
+    else box.textContent=mode==='print'?'místo pro ruční podpis':'podpis';
+  }
+
+  const formDataObject = () => {
+    syncBankAccount(); if(sameAsPermanent.checked)syncCorrespondence();
+    const fd=new FormData(form),data={};for(const [k,v] of fd.entries())data[k]=v;
+    data.bankAccount=bankAccount.value;
+    data.correspondenceAddress=correspondenceAddress.value;data.correspondencePostal=correspondencePostal.value;
+    data.children=children.filter(x=>cleanValue(x.name)||cleanValue(x.personalNumber));
+    data.dependents=dependents.filter(x=>cleanValue(x.name)||cleanValue(x.personalNumber));
+    data.declarationConfirmed=declarationConfirmed.checked;data.printSignatureConfirmed=printSignatureConfirmed.checked;data.sameAsPermanent=sameAsPermanent.checked;
+    const mode=selectedSignatureMode();data.signatureData=mode==='draw'?drawSignatureData:mode==='upload'?uploadSignatureData:'';
+    return data;
+  };
+  const saveDraft = () => {try{const data=formDataObject();delete data.signatureData;localStorage.setItem(storageKey,JSON.stringify(data));}catch(_){}};
+  const restoreDraft = 
