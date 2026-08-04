@@ -1,0 +1,140 @@
+
+(() => {
+  const form = document.getElementById('questionnaire');
+  const panels = [...document.querySelectorAll('.panel')];
+  const steps = [...document.querySelectorAll('.step')];
+  const status = document.getElementById('status');
+  const genBtn = document.getElementById('generatePdf');
+  const previewPdf = document.getElementById('previewPdf');
+  const downloadPdf = document.getElementById('downloadPdf');
+  const printPdf = document.getElementById('printPdf');
+  const declarationConfirmed = document.getElementById('declarationConfirmed');
+  const printSignatureConfirmed = document.getElementById('printSignatureConfirmed');
+  const readyNote = document.getElementById('readyNote');
+  const canvas = document.getElementById('signatureCanvas');
+  const signatureFile = document.getElementById('signatureFile');
+  const signaturePreview = document.getElementById('signaturePreview');
+  const sameAsPermanent = document.getElementById('sameAsPermanent');
+  const correspondenceAddress = document.getElementById('correspondenceAddress');
+  const correspondencePostal = document.getElementById('correspondencePostal');
+  const bankAccountNumber = document.getElementById('bankAccountNumber');
+  const bankCode = document.getElementById('bankCode');
+  const bankAccount = document.getElementById('bankAccount');
+  const cropSignatureBtn = document.getElementById('cropSignature');
+  const removeWhiteBackground = document.getElementById('removeWhiteBackground');
+  let current = 0;
+  let children = [{name:'', personalNumber:''}];
+  let dependents = [{name:'', personalNumber:''}];
+  let drawSignatureData = '';
+  let uploadSignatureData = '';
+  let rawUploadImage = null;
+  let canvasReady = false;
+  let drawing = false;
+  let hasDrawn = false;
+  let strokeHistory = [];
+  let restoredDraft = false;
+  const storageKey = 'koop-personal-questionnaire-v4';
+
+  const escapeHTML = (value) => String(value ?? '')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  const cleanValue = (value) => String(value ?? '').trim();
+
+  const formatDateInput = (value) => {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return digits.slice(0,2) + '.' + digits.slice(2);
+    return digits.slice(0,2) + '.' + digits.slice(2,4) + '.' + digits.slice(4);
+  };
+  const isValidCZDate = (value) => {
+    const match = String(value || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!match) return false;
+    const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    return year >= 1900 && year <= 2200 && d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
+  };
+  const todayCZ = () => {
+    const d = new Date();
+    return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+  };
+  const formatPersonalNumber = (value) => {
+    const digits = String(value || '').replace(/\D/g,'').slice(0,10);
+    return digits.length > 6 ? digits.slice(0,6) + '/' + digits.slice(6) : digits;
+  };
+  const validPersonalNumber = (value) => /^\d{6}\/\d{3,4}$/.test(String(value || ''));
+  const formatPostal = (value) => {
+    const digits = String(value || '').replace(/\D/g,'').slice(0,5);
+    return digits.length > 3 ? digits.slice(0,3) + ' ' + digits.slice(3) : digits;
+  };
+  const validPostal = (value) => /^\d{3} \d{2}$/.test(String(value || ''));
+  const formatPhone = (value) => {
+    let raw = String(value || '').trim();
+    const plus = raw.startsWith('+');
+    let digits = raw.replace(/\D/g,'').slice(0,12);
+    if (plus && digits.startsWith('420')) {
+      const rest = digits.slice(3);
+      return '+420' + (rest ? ' ' + rest.match(/.{1,3}/g).join(' ') : '');
+    }
+    if (digits.length === 12 && digits.startsWith('420')) {
+      const rest = digits.slice(3);
+      return '+420 ' + rest.match(/.{1,3}/g).join(' ');
+    }
+    return digits.match(/.{1,3}/g)?.join(' ') || '';
+  };
+  const validPhone = (value) => {
+    const digits = String(value || '').replace(/\D/g,'');
+    return digits.length >= 9 && digits.length <= 12;
+  };
+  const validBankNumber = (value) => /^\d{2,16}$/.test(String(value || ''));
+  const validBankCode = (value) => /^\d{4}$/.test(String(value || ''));
+
+  const setStepStatus = () => {
+    document.getElementById('stepText').textContent = `Krok ${current + 1} z ${panels.length}`;
+  };
+  const showStep = (index, options = {}) => {
+    const next = Math.max(0, Math.min(panels.length - 1, index));
+    if (!options.skipValidation && next > current && current <= 2 && !validatePanel(current, true)) return false;
+    current = next;
+    panels.forEach((p,i) => p.classList.toggle('active', i === current));
+    steps.forEach((s,i) => {
+      s.classList.toggle('active', i === current);
+      s.classList.toggle('done', i < current);
+    });
+    setStepStatus();
+    if (current === 3) updateReview();
+    if (current === 4) {
+      updateLastPagePreview();
+      if (selectedSignatureMode() === 'draw') requestAnimationFrame(setupCanvas);
+    }
+    window.scrollTo({top: Math.max(0, document.querySelector('.stepbar').offsetTop - 12), behavior:'smooth'});
+    return true;
+  };
+  steps.forEach(s => s.addEventListener('click', () => {
+    const target = Number(s.dataset.step);
+    if (target >= 3 && !validatePanelsThrough(2, true)) return;
+    showStep(target, {skipValidation:true});
+  }));
+  document.querySelectorAll('.next').forEach(b => b.addEventListener('click', () => {
+    if (current <= 2 && !validatePanel(current, true)) return;
+    showStep(current + 1, {skipValidation:true});
+  }));
+  document.querySelectorAll('.prev').forEach(b => b.addEventListener('click', () => showStep(current - 1, {skipValidation:true})));
+
+  const renderRows = (kind) => {
+    const isChild = kind === 'child';
+    const arr = isChild ? children : dependents;
+    const box = document.getElementById(isChild ? 'childrenRows' : 'dependentRows');
+    box.innerHTML = '';
+    if (!arr.length) {
+      const n = document.createElement('div');
+      n.className = 'empty-note';
+      n.textContent = isChild ? 'Zatím není přidáno žádné dítě.' : 'Zatím není přidána žádná další vyživovaná osoba.';
+      box.appendChild(n);
+      return;
+    }
+    arr.forEach((row, idx) => {
+      const el = document.createElement('div');
+      el.className = 'repeat-row';
+      el.innerHTML = `
+        <div class="field"><label>${isChild ? 'Jméno a příjmení dítěte' : 'Jméno a příjmení osoby'}</label><input data-row-kind="${kind}" data-row-index="${idx}" data-row-field="name" value="${escapeHTML(row.name)}"><div class="error-message"></div></div>
+        <div class="field"><label>Rodné číslo</label><input class="personal-number" inputmode="numeric" maxlength="11" data-row-kind="${kind}" data-row-index="${idx}" data-row-field="personalNumber" value="
