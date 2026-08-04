@@ -1,0 +1,51 @@
+
+<main class="page">
+<header class="hero">
+<div class="tag">LOKÁLNÍ APLIKACE</div>
+<div class="brand">
+<svg aria-hidden="true" class="brand-mark" viewbox="0 0 60 60">
+<path d="M30 5 43 27H34L30 20l-4 7h-9L30 5Z" fill="none" stroke="white" stroke-linejoin="round" stroke-width="4"></path>
+<path d="m12 38 13-22 4 8-4 7 4 7-4 8-13-8Z" fill="none" stroke="white" stroke-linejoin="round" stroke-width="4"></path>
+<path d="m48 38-26 0 5-8h8l4-7 9 15Z" fill="none" stroke="white" stroke-linejoin="round" stroke-width="4"></path>
+</svg>
+<div>
+<div class="brand-name">Kooperativa</div>
+<div class="brand-rule"></div>
+<div class="brand-sub">VIENNA INSURANCE GROUP</div>
+</div>
+</div>
+<h1>Osobní dotazník zaměstnance</h1>
+<p>Vyplňte jednotlivé sekce. Údaje zůstávají v tomto prohlížeči a použijí se pouze pro vytvoření výsledného PDF.</p>
+</header>
+<nav aria-label="Sekce dotazníku" class="stepbar">
+<button class="step active" data-step="0" type="button"><span class="step-no">1</span><span><strong>Osobní údaje</strong><small>Identifikace a kontakty</small></span></button>
+<button class="step" data-step="1" type="button"><span class="step-no">2</span><span><strong>Rodinní příslušníci</strong><small>Manžel/ka, děti a další osoby</small></span></button>
+<button class="step" data-step="2" type="button"><span class="step-no">3</span><span><strong>Ostatní údaje</strong><small>Vzdělání a doplňující informace</small></span></button>
+<button class="step" data-step="3" type="button"><span class="step-no">4</span><span><strong>Kontrola údajů</strong><small>Souhrn před podpisem</small></span></button>
+<button class="step" data-step="4" type="button"><span class="step-no">5</span><span><strong>Potvrzení a podpis</strong><small>Ochrana údajů a dokončení</small></span></button>
+</nav>
+<div class="progress-wrap"><strong id="stepText">Krok 1 z 5</strong><div class="progress"><span id="progressBar"></span></div><strong id="progressText">0 % vyplněno</strong></div>
+<form id="questionnaire" novalidate="">
+<section class="panel active" data-panel="0">
+<div class="panel-head"><div><h2>Osobní údaje</h2><p>Základní identifikační, kontaktní a platební údaje.</p></div></div>
+<div class="panel-body">
+<div class="grid">
+<div class="field full"><label for="fullName">Příjmení, jméno, titul <span class="req">*</span></label><input autocomplete="name" id="fullName" name="fullName" required=""/></div>
+<div class="field"><label for="previousSurname">Předchozí příjmení</label><input id="previousSurname" name="previousSurname"/></div>
+<div class="field"><label for="birthSurname">Rodné příjmení</label><input id="birthSurname" name="birthSurname"/></div>
+<div class="field third"><label for="maritalStatus">Rodinný stav</label><select id="maritalStatus" name="maritalStatus"><option value="">Vyberte</option><option>Svobodný/á</option><option>Ženatý / vdaná</option><option>Rozvedený/á</option><option>Vdovec / vdova</option><option>Registrované partnerství</option><option>Jiné</option></select></div>
+<div class="field third"><label for="citizenship">Státní občanství <span class="req">*</span></label><input id="citizenship" name="citizenship" required=""/></div>
+<div class="field third"><label for="healthInsurance">Zdravotní pojišťovna <span class="req">*</span></label><input id="healthInsurance" name="healthInsurance" required=""/></div>
+<div class="field"><label for="personalNumber">Rodné číslo <span class="req">*</span></label><input class="personal-number" id="personalNumber" inputmode="numeric" maxlength="11" name="personalNumber" placeholder="např. 900101/1234" required=""/></div>
+<div class="field"><label for="birthDate">Den, měsíc, rok narození <span class="req">*</span></label><input class="date-input" id="birthDate" inputmode="numeric" maxlength="10" name="birthDate" placeholder="DD.MM.RRRR" required=""/></div>
+<div class="field full"><label for="birthPlace">Místo narození, okres (stát) <span class="req">*</span></label><input id="birthPlace" name="birthPlace" required=""/></div>
+<div class="field"><label for="permanentAddress">Trvalé bydliště <span class="req">*</span></label><input autocomplete="street-address" id="permanentAddress" name="permanentAddress" required=""/></div>
+<div class="field quarter"><label for="permanentPostal">PSČ <span class="req">*</span></label><input autocomplete="postal-code" class="postal-code" id="permanentPostal" inputmode="numeric" maxlength="6" name="permanentPostal" required=""/></div>
+<div class="field quarter"><label for="phone">Telefonní číslo <span class="req">*</span></label><input autocomplete="tel" id="phone" name="phone" required="" type="tel"/></div>
+<div class="field"><label for="correspondenceAddress">Korespondenční adresa</label><input id="correspondenceAddress" name="correspondenceAddress"/></div>
+<div class="field quarter"><label for="correspondencePostal">PSČ</label><input class="postal-code" id="correspondencePostal" inputmode="numeric" maxlength="6" name="correspondencePostal"/></div>
+<div class="field full compact-check"><input id="sameAsPermanent" name="sameAsPermanent" type="checkbox"/><label for="sameAsPermanent">Korespondenční adresa je stejná jako trvalé bydliště</label></div>
+<div class="field quarter"><label for="dataBox">ID datové schránky</label><input id="dataBox" name="dataBox"/></div>
+<div class="field full"><label for="email">E-mailová adresa <span class="req">*</span></label><input autocomplete="email" id="email" name="email" required="" type="email"/></div>
+<div class="info"><strong>Informace o použití soukromé e-mailové adresy pro pracovněprávní účely.</strong><br/>Zaměstnancem uvedená soukromá e-mailová adresa je určena pro zasílání pracovněprávních dokumentů uvedených v § 21 odst. 1 zákona č. 262/2006 Sb., zákoník práce, ve znění pozdějších předpisů, jsou-li uzavřeny elektronicky.</div>
+<div class="field"><label for="bankAccountNumber">Číslo bankovního účtu <span class="req">*</span></label><input id="bankAccountNumber" inputmode="numeric" name="bankAccountNumber" placeholde
