@@ -1,0 +1,33 @@
+ss="actions"><button class="btn secondary prev" type="button">Zpět</button><div class="actions-right"><button class="btn primary next" type="button">Pokračovat ke kontrole</button></div></div>
+</div>
+</section>
+<section class="panel" data-panel="3">
+<div class="panel-head"><div><h2>Kontrola údajů</h2><p>Zkontrolujte všechny údaje před podpisem. U každé části se můžete vrátit k úpravě.</p></div></div>
+<div class="panel-body">
+<div aria-live="polite" class="review-content" id="reviewContent"></div>
+<div class="review-callout">Zkontrolujte zejména rodné číslo, bankovní účet, adresy a odpovědi ANO/NE. Po pokračování ještě zvolíte způsob podpisu.</div>
+<div class="actions"><button class="btn secondary prev" type="button">Zpět</button><div class="actions-right"><button class="btn primary next" type="button">Pokračovat k podpisu</button></div></div>
+</div>
+</section>
+<section class="panel" data-panel="4">
+<div class="panel-head"><div><h2>Potvrzení a podpis</h2><p>Informace o zpracování osobních údajů budou tvořit poslední stránku výsledného PDF.</p></div></div>
+<div class="panel-body">
+<div class="grid">
+<div class="legal-toolbar"><strong>Informace o zpracování osobních údajů</strong><button class="btn secondary" id="toggleLegal" type="button">Otevřít celé znění</button></div><div class="legal-copy compact" id="legalCopy">
+<p class="lead">INFORMACE O ZPRACOVÁNÍ OSOBNÍCH ÚDAJŮ V následující části jsou uvedeny základní informace o zpracování Vašich osobních údajů společností Kooperativa pojišťovna, a.s., Vienna Insurance Group, IČO: 47116617 (dále jen „Pojišťovna“). Více informací o zpracování, možnosti podání námitky v případě zpracování na základě oprávněného zájmu, práva na přístup a dalších práv, naleznete v Informačním memorandu pro zaměstnance o zpracování osobních údajů, které je nedílnou součástí tohoto dokumentu a zároveň je trvale dostupné na intranetu v sekci Personálního úseku v sekci GDPR pro zaměstnance.</p>
+<h3>A. ZPRACOVÁNÍ CITLIVÝCH OSOBNÍCH ÚDAJŮ</h3>
+<h4>A.1. Zpracování údajů o Vašem zdravotním stavu</h4><p>Údaje o Vašem zdravotním stavu zpracovává Pojišťovna v nezbytném rozsahu proto, aby splnila zákonné povinnosti v oblasti pracovního práva (např. vedení evidence pracovních úrazů a nemocí z povolání). Tyto povinnosti vyplývají zejména ze zákona č. 262/2006 Sb., zákoník práce, a zákona č. 435/2004 Sb., o zaměstnanosti.</p>
+<h4>A.2. Zpracování údajů o trestní bezúhonnosti</h4><p>Na základě plnění právní povinnosti zpracovává Pojišťovna v případě některých pracovních pozic údaje o Vaší trestní bezúhonnosti, a to proto, aby splnila povinnosti vycházející ze zákona o distribuci pojištění a zajištění a dále ze zákona č. 277/2009 Sb., o pojišťovnictví, dle nichž mohou určité pozice zastávat pouze osoby, které jsou ve smyslu těchto zákonů důvěryhodné.</p>
+<h3>B. ZPRACOVÁNÍ OSTATNÍCH OSOBNÍCH ÚDAJŮ (TJ. VYJMA CITLIVÝCH OSOBNÍCH ÚDAJŮ)</h3>
+<h4>B.1. Zpracování osobních údajů na základě plnění smlouvy</h4><p>Berete na vědomí, že Vaše identifikační a kontaktní údaje a také mzdové informace a údaje související s výkonem práce Pojišťovna zpracovává pro účely vzniku, správy a ukončení pracovněprávních vztahů, když v tomto případě jde o zpracování nezbytné pro plnění smlouvy. Jedná se tak o činnosti, které zejména souvisejí s přidělováním práce a výplatou mzdy.</p>
+<h4>B.2. Zpracování osobních údajů na základě oprávněných zájmů</h4><p>Berete na vědomí, že Vaše identifikační a kontaktní údaje, mzdové informace, údaje související s výkonem práce a také bezpečnostní a systémové informace Pojišťovna zpracovává pro účely zajištění řádného nastavení vztahů se zaměstnanci, ochrany majetku a osob, ochrany právních nároků a předcházení podvodů a jejich šetření Pojišťovny, když v těchto případech jde o zpracování, které Pojišťovna provádí na základě svých oprávněných zájmů.</p><p>Proti takovému zpracování máte právo kdykoli podat námitku, která může být uplatněna způsobem uvedeným v Informačním memorandu pro zaměstnance o zpracování osobních údajů.</p>
+<h4>B.3. Zpracování osobních údajů na základě plnění právních povinností</h4><p>Berete na vědomí, že Vaše identifikační a kontaktní údaje, mzdové a daňové informace a také údaje související s výkonem práce Pojišťovna zpracovává na základě a pro účel plnění svých právních povinností vyplývajících zejména ze zákona č. 262/2006 Sb., zákoník práce, zákona č. 435/2004 Sb., o zaměstnanosti, a zákona č. 586/1992 Sb., o daních z příjmů, a dále zákonů v oblasti veřejného zdravotního pojištění a sociálního zabezpečení.</p>
+<h4>B.4. Povinnost zaměstnance informovat rodinné příslušníky</h4><p>Zavazujete se informovat rodinné příslušníky, pokud Pojišťovně poskytnete jejich osobní údaje, a to zejména v souvislosti s prokázáním nároku na odečet nezdanitelné části základu daně, slevy na dani nebo nároku na daňové zvýhodnění, o zpracování jejich osobních údajů na základě plnění právních povinností.</p>
+<p class="confirmation">Podpisem tohoto dokumentu potvrzujete, že jste se důkladně seznámil s dokumentem Informační memorandum pro zaměstnance o zpracování osobních údajů, zejména s bližší identifikací dalších správců, rozsahem zpracovávaných údajů, právními základy (důvody), účely a dobou zpracování osobních údajů a právy, která Vám v této souvislosti náleží.</p>
+<p>Prohlašuji, že jsem nic nezamlčel/a a všechny mnou uvedené údaje jsou pravdivé.</p>
+</div>
+<div class="field"><label for="signaturePlace">Místo podpisu (V)</label><input id="signaturePlace" name="signaturePlace" placeholder="např. Ostrava"/></div>
+<div class="field"><label for="signatureDate">Datum podpisu <span class="req">*</span></label><input class="date-input" id="signatureDate" inputmode="numeric" maxlength="10" name="signatureDate" placeholder="DD.MM.RRRR" required=""/></div>
+<div class="subsection field full">Způsob podpisu</div>
+<div class="signature-options">
+<label class="signature-option"><input name="signatureMode" type="radio" value="draw"/><span><strong>Nakreslit elektronický podpis</strong><sm
