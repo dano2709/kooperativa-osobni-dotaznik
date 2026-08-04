@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Osobní dotazník - Kooperativa</title>
-  <link rel="stylesheet" href="v4.css">
+  <link rel="stylesheet" href="v4.css?v=20260805-1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <main id="app-loading" style="font-family:Arial,sans-serif;max-width:760px;margin:70px auto;padding:28px"><h1 style="color:#00843D">Načítám osobní dotazník…</h1></main>
@@ -14,7 +15,7 @@
       const names=['v4-body-1.part','v4-body-2.part','v4-body-3.part','v4-body-4.part'];
       const parts=await Promise.all(names.map(async n=>{const r=await fetch(n,{cache:'no-store'});if(!r.ok)throw new Error(`${n}: ${r.status}`);return r.text();}));
       document.body.innerHTML=parts.join('');
-      const script=document.createElement('script');script.src='v4-loader.js';script.defer=true;document.body.appendChild(script);
+      const script=document.createElement('script');script.src='v4-loader.js?v=20260805-1';script.defer=true;document.body.appendChild(script);
     }catch(err){document.body.innerHTML=`<main style="font-family:Arial,sans-serif;max-width:760px;margin:70px auto;padding:28px"><h1 style="color:#00843D">Aplikaci se nepodařilo načíst</h1><p>${String(err.message||err)}</p><p>Obnovte stránku pomocí Ctrl+F5.</p></main>`;console.error(err);}
   })();
   </script>
