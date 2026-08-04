@@ -1,0 +1,124 @@
+${escapeHTML(row.personalNumber)}"><div class="error-message"></div></div>
+        <button type="button" class="remove-btn" data-remove-kind="${kind}" data-remove-index="${idx}" aria-label="Odebrat řádek">×</button>`;
+      box.appendChild(el);
+    });
+  };
+  document.getElementById('addChild').addEventListener('click', () => { children.push({name:'',personalNumber:''}); renderRows('child'); saveDraft(); updateProgress(); });
+  document.getElementById('addDependent').addEventListener('click', () => { dependents.push({name:'',personalNumber:''}); renderRows('dependent'); saveDraft(); updateProgress(); });
+
+  const ensureError = (target) => {
+    const host = target.classList?.contains('choice') ? target.parentElement : target.closest('.field') || target.parentElement;
+    let error = host.querySelector(':scope > .error-message');
+    if (!error) {
+      error = document.createElement('div');
+      error.className = 'error-message';
+      host.appendChild(error);
+    }
+    return error;
+  };
+  const setError = (target, message) => {
+    target.classList.add('invalid');
+    const error = ensureError(target);
+    error.textContent = message;
+    error.classList.add('show');
+  };
+  const clearError = (target) => {
+    target.classList?.remove('invalid');
+    const host = target.classList?.contains('choice') ? target.parentElement : target.closest?.('.field') || target.parentElement;
+    const error = host?.querySelector(':scope > .error-message');
+    if (error) { error.textContent = ''; error.classList.remove('show'); }
+  };
+  const visible = (el) => !el.closest('.conditional') || el.closest('.conditional').classList.contains('visible');
+  const isConditionallyRequired = (el) => {
+    const rule = el.dataset.requiredWhen;
+    if (!rule) return false;
+    const [name, val] = rule.split(':');
+    return form.querySelector(`input[name="${name}"]:checked`)?.value === val;
+  };
+  const validateField = (el) => {
+    if (!visible(el)) { clearError(el); return true; }
+    const value = cleanValue(el.value);
+    const required = el.required || isConditionallyRequired(el);
+    let message = '';
+    if (required && !value) message = 'Tento údaj je povinný.';
+    else if (!value) { clearError(el); return true; }
+    else if (el.type === 'email' && !el.validity.valid) message = 'Zadejte platnou e-mailovou adresu.';
+    else if (el.classList.contains('date-input') && !isValidCZDate(value)) message = 'Použijte platné datum ve formátu DD.MM.RRRR.';
+    else if (el.classList.contains('personal-number') && !validPersonalNumber(value)) message = 'Použijte formát RRMMDD/XXXX.';
+    else if (el.classList.contains('postal-code') && !validPostal(value)) message = 'Použijte formát 123 45.';
+    else if (el.id === 'phone' && !validPhone(value)) message = 'Zadejte alespoň 9 číslic, případně včetně předvolby.';
+    else if (el.id === 'bankAccountNumber' && !validBankNumber(value)) message = 'Číslo účtu musí obsahovat 2 až 16 číslic.';
+    else if (el.id === 'bankCode' && !validBankCode(value)) message = 'Kód banky musí obsahovat přesně 4 číslice.';
+    else if (el.id === 'educationYear' && !/^\d{4}$/.test(value)) message = 'Rok zadejte čtyřmi číslicemi.';
+    if (message) { setError(el, message); return false; }
+    clearError(el); return true;
+  };
+  const validateRows = (panel, focusFirst = false) => {
+    if (Number(panel.dataset.panel) !== 1) return {valid:true, first:null};
+    let first = null, valid = true;
+    panel.querySelectorAll('[data-row-kind]').forEach(input => clearError(input));
+    for (const kind of ['child','dependent']) {
+      const arr = kind === 'child' ? children : dependents;
+      arr.forEach((row, idx) => {
+        const inputs = [...panel.querySelectorAll(`[data-row-kind="${kind}"][data-row-index="${idx}"]`)];
+        if (!inputs.length) return;
+        const nameInput = inputs.find(x => x.dataset.rowField === 'name');
+        const rcInput = inputs.find(x => x.dataset.rowField === 'personalNumber');
+        const hasAny = cleanValue(row.name) || cleanValue(row.personalNumber);
+        if (!hasAny) return;
+        if (!cleanValue(row.name)) { setError(nameInput,'Doplňte jméno a příjmení.'); valid=false; first ||= nameInput; }
+        if (!cleanValue(row.personalNumber)) { setError(rcInput,'Doplňte rodné číslo.'); valid=false; first ||= rcInput; }
+        else if (!validPersonalNumber(row.personalNumber)) { setError(rcInput,'Použijte formát RRMMDD/XXXX.'); valid=false; first ||= rcInput; }
+      });
+    }
+    if (!valid && focusFirst && first) setTimeout(() => { first.focus(); first.scrollIntoView({behavior:'smooth',block:'center'}); },120);
+    return {valid, first};
+  };
+  const validatePanel = (index, focusFirst = false) => {
+    const panel = panels[index];
+    let valid = true, first = null;
+    panel.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),select,textarea').forEach(el => {
+      if (!validateField(el)) { valid = false; first ||= el; }
+    });
+    panel.querySelectorAll('.required-choice').forEach(choice => {
+      const name = choice.dataset.radioGroup;
+      const selected = form.querySelector(`input[name="${name}"]:checked`);
+      if (!selected) { setError(choice,'Vyberte odpověď ANO nebo NE.'); valid=false; first ||= choice.querySelector('input'); }
+      else clearError(choice);
+    });
+    const rows = validateRows(panel, false);
+    if (!rows.valid) { valid=false; first ||= rows.first; }
+    if (!valid && focusFirst && first) {
+      showStep(index,{skipValidation:true});
+      setTimeout(() => { first.focus?.(); first.scrollIntoView({behavior:'smooth',block:'center'}); },180);
+    }
+    return valid;
+  };
+  const validatePanelsThrough = (last, focusFirst = false) => {
+    for (let i=0;i<=last;i++) if (!validatePanel(i, focusFirst)) return false;
+    return true;
+  };
+
+  const syncBankAccount = () => {
+    const n = cleanValue(bankAccountNumber.value), c = cleanValue(bankCode.value);
+    bankAccount.value = n || c ? `${n}/${c}` : '';
+  };
+  const syncCorrespondence = () => {
+    const on = sameAsPermanent.checked;
+    if (on) {
+      correspondenceAddress.value = document.getElementById('permanentAddress').value;
+      correspondencePostal.value = document.getElementById('permanentPostal').value;
+    }
+    correspondenceAddress.disabled = on;
+    correspondencePostal.disabled = on;
+  };
+  sameAsPermanent.addEventListener('change', () => { syncCorrespondence(); saveDraft(); updateProgress(); updateReview(); });
+
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.classList?.contains('date-input')) t.value = formatDateInput(t.value);
+    if (t.classList?.contains('personal-number')) t.value = formatPersonalNumber(t.value);
+    if (t.classList?.contains('postal-code')) t.value = formatPostal(t.value);
+    if (t.id === 'phone') t.value = formatPhone(t.value);
+    if (t.id === 'bankAccountNumber') t.value = t.value.replace(/\D/g,'').slice(0,16);
+    if (t.id === 'bankCode') t.value = t.valu
