@@ -1,0 +1,107 @@
+e.replace(/\D/g,'').slice(0,4);
+    if (t.id === 'educationYear') t.value = t.value.replace(/\D/g,'').slice(0,4);
+    if (t.dataset?.rowKind) {
+      const arr = t.dataset.rowKind === 'child' ? children : dependents;
+      if (arr[Number(t.dataset.rowIndex)]) arr[Number(t.dataset.rowIndex)][t.dataset.rowField] = t.value;
+    }
+    if ((t.id === 'permanentAddress' || t.id === 'permanentPostal') && sameAsPermanent.checked) syncCorrespondence();
+    if (t.id === 'bankAccountNumber' || t.id === 'bankCode') syncBankAccount();
+    clearError(t);
+    saveDraft(); updateProgress(); updateSignatureReady(); updateLastPagePreview();
+    if (current === 3) updateReview();
+  });
+  document.addEventListener('blur', (e) => {
+    const t=e.target;
+    if (t.matches?.('input,select,textarea')) validateField(t);
+  }, true);
+  document.addEventListener('click', (e) => {
+    const remove = e.target.closest('[data-remove-kind]');
+    if (remove) {
+      const arr = remove.dataset.removeKind === 'child' ? children : dependents;
+      arr.splice(Number(remove.dataset.removeIndex),1);
+      renderRows(remove.dataset.removeKind); saveDraft(); updateProgress();
+      return;
+    }
+    const edit = e.target.closest('[data-edit-step]');
+    if (edit) showStep(Number(edit.dataset.editStep), {skipValidation:true});
+  });
+
+  const conditionalRadio = (name, selector) => {
+    const update = () => {
+      const val = form.querySelector(`input[name="${name}"]:checked`)?.value;
+      document.querySelectorAll(selector).forEach(el => {
+        el.classList.toggle('visible', val === 'ANO');
+        el.setAttribute('aria-hidden', val === 'ANO' ? 'false' : 'true');
+        if (val !== 'ANO') el.querySelectorAll('input,textarea').forEach(clearError);
+      });
+    };
+    form.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener('change', () => {
+      clearError(r.closest('.choice')); update(); saveDraft(); updateProgress(); updateReview();
+    }));
+    return update;
+  };
+  const updateClose = conditionalRadio('closePersonEmployed','#closePersonDetailsWrap');
+  const updateActivity = conditionalRadio('otherActivity','#activityTypeWrap');
+  const updatePension = conditionalRadio('pension','.pension-extra');
+  const updateDisability = conditionalRadio('disability','.disability-extra');
+
+  const reviewValue = (value) => cleanValue(value) ? escapeHTML(value) : '<span class="review-empty">Neuvedeno</span>';
+  const reviewSection = (title, step, items) => `<section class="review-section"><div class="review-section-head"><h3>${escapeHTML(title)}</h3><button type="button" class="review-edit" data-edit-step="${step}">Upravit</button></div><dl class="review-grid">${items.map(([l,v]) => `<div class="review-item"><dt>${escapeHTML(l)}</dt><dd>${reviewValue(v)}</dd></div>`).join('')}</dl></section>`;
+  const listPeople = (rows) => rows.filter(r => cleanValue(r.name) || cleanValue(r.personalNumber)).map(r => `${cleanValue(r.name) || 'Bez jména'} (${cleanValue(r.personalNumber) || 'bez rodného čísla'})`).join('; ') || '';
+  function updateReview() {
+    const data = formDataObject();
+    document.getElementById('reviewContent').innerHTML =
+      reviewSection('Osobní údaje',0,[
+        ['Příjmení, jméno, titul',data.fullName],['Předchozí příjmení',data.previousSurname],['Rodné příjmení',data.birthSurname],['Rodinný stav',data.maritalStatus],
+        ['Státní občanství',data.citizenship],['Zdravotní pojišťovna',data.healthInsurance],['Rodné číslo',data.personalNumber],['Datum narození',data.birthDate],
+        ['Místo narození',data.birthPlace],['Trvalé bydliště',`${data.permanentAddress || ''}${data.permanentPostal ? ', '+data.permanentPostal : ''}`],
+        ['Korespondenční adresa',`${data.correspondenceAddress || ''}${data.correspondencePostal ? ', '+data.correspondencePostal : ''}`],['Telefon',data.phone],
+        ['E-mail',data.email],['ID datové schránky',data.dataBox],['Bankovní účet',data.bankAccount]
+      ]) +
+      reviewSection('Rodinní příslušníci',1,[
+        ['Manžel / manželka',`${data.spouseName || ''}${data.spousePersonalNumber ? ' ('+data.spousePersonalNumber+')' : ''}`],['Děti',listPeople(data.children)],['Ostatní vyživované osoby',listPeople(data.dependents)]
+      ]) +
+      reviewSection('Ostatní údaje',2,[
+        ['Vzdělání',`${data.education || ''}${data.educationYear ? ', '+data.educationYear : ''}`],['Řidičský průkaz',data.drivingLicence],['Exekuce / insolvence',data.executionInsolvency],
+        ['Osoba blízká v Kooperativě',`${data.closePersonEmployed || ''}${data.closePersonDetails ? ' - '+data.closePersonDetails : ''}`],
+        ['Jiná shodná výdělečná činnost',`${data.otherActivity || ''}${data.activityType ? ' - '+data.activityType : ''}`],
+        ['Důchod',`${data.pension || ''}${data.pensionType ? ' - '+data.pensionType : ''}${data.pensionGrantedDate ? ', od '+data.pensionGrantedDate : ''}`],
+        ['Zdravotní postižení',`${data.disability || ''}${data.disabilityType ? ' - '+data.disabilityType : ''}${data.disabilityDecisionDate ? ', '+data.disabilityDecisionDate : ''}`]
+      ]);
+  }
+
+  const setupCanvas = () => {
+    if (canvas.clientWidth < 20) return;
+    const existing = drawSignatureData;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(180 * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,rect.width,180);
+    ctx.lineWidth = 2.3; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+    canvasReady = true;
+    if (existing) restoreCanvasImage(existing);
+  };
+  const restoreCanvasImage = (dataURL) => {
+    const img = new Image();
+    img.onload = () => {
+      const rect=canvas.getBoundingClientRect(), ctx=canvas.getContext('2d');
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,rect.width,180); ctx.drawImage(img,0,0,rect.width,180);
+      drawSignatureData=canvas.toDataURL('image/png'); hasDrawn=true; updateSignatureReady(); updateLastPagePreview();
+    };
+    img.src=dataURL;
+  };
+  const canvasPoint = (event) => { const rect=canvas.getBoundingClientRect(); return {x:event.clientX-rect.left,y:event.clientY-rect.top}; };
+  canvas.addEventListener('pointerdown', (e) => {
+    setupCanvas();
+    strokeHistory.push({data:canvas.toDataURL('image/png'),had:hasDrawn});
+    if (strokeHistory.length > 30) strokeHistory.shift();
+    drawing=true; hasDrawn=true; canvas.setPointerCapture(e.pointerId);
+    const p=canvasPoint(e), ctx=canvas.getContext('2d'); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', (e) => { if(!drawing)return; const p=canvasPoint(e),ctx=canvas.getContext('2d');ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault(); });
+  const finishDrawing = (e) => {
+    if(!drawing)return; drawing=false; try{canvas.releasePointerCapture(e.pointerId)}catch(_){}
+    drawSignatureDa
