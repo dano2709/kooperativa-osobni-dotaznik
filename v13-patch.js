@@ -37,10 +37,26 @@
         width:100%;
         min-width:190px;
       }
+      .print-actions{
+        display:flex!important;
+        align-items:center;
+        justify-content:flex-end;
+        flex-wrap:wrap;
+        gap:10px;
+      }
+      #previewPdf.v13-visible,
+      #downloadPdf.v13-visible,
+      #printPdf.v13-visible{
+        display:inline-flex!important;
+        visibility:visible!important;
+        opacity:1!important;
+        pointer-events:auto!important;
+      }
       @media(max-width:860px){
         .v13-phone-row{grid-template-columns:1fr}
         .v13-phone-row .v11-phone-wrap{grid-template-columns:1fr!important}
         .v13-phone-row #phoneNational{min-width:0}
+        .print-actions{justify-content:flex-start}
       }
     `;
     document.head.appendChild(style);
@@ -77,10 +93,57 @@
     setTimeout(()=>clearInterval(timer),20000);
   };
 
+  const setupResultActions=()=>{
+    const preview=document.getElementById('previewPdf');
+    const download=document.getElementById('downloadPdf');
+    const print=document.getElementById('printPdf');
+    const status=document.querySelector('.v12-output-status');
+    const actions=[preview,download,print].filter(Boolean);
+    if(!actions.length)return;
+
+    const reveal=()=>{
+      actions.forEach(action=>{
+        action.hidden=false;
+        action.removeAttribute('hidden');
+        action.classList.remove('hide','hidden');
+        action.classList.add('v13-visible');
+        action.style.setProperty('display','inline-flex','important');
+      });
+    };
+
+    const hide=()=>{
+      actions.forEach(action=>{
+        action.classList.remove('v13-visible');
+        action.style.removeProperty('display');
+      });
+    };
+
+    const isReady=()=>{
+      const href=preview?.getAttribute('href')||download?.getAttribute('href')||'';
+      const text=(status?.textContent||'').toLowerCase();
+      return href.startsWith('blob:')||text.includes('pdf je připravené');
+    };
+
+    hide();
+    const sync=()=>{if(isReady())reveal();};
+    sync();
+
+    if(status){
+      new MutationObserver(sync).observe(status,{childList:true,subtree:true,characterData:true});
+    }
+    [preview,download].forEach(link=>{
+      if(link)new MutationObserver(sync).observe(link,{attributes:true,attributeFilter:['href','hidden','class','style']});
+    });
+
+    const poll=setInterval(sync,250);
+    setTimeout(()=>clearInterval(poll),120000);
+  };
+
   waitForV12().then(()=>{
     document.documentElement.dataset.appVersion='13';
     addStyles();
     movePhone();
     reportDependencyState();
+    setupResultActions();
   }).catch(error=>console.error('Kooperativa v13:',error));
 })();
