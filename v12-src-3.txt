@@ -1,0 +1,114 @@
+
+    const phone=get('phone')||[fieldValue('phonePrefixCustom')||clean($('#phonePrefixChoice')?.value?.split('|')[1]),fieldValue('phoneNational')].filter(Boolean).join(' ');
+    return {
+      fullName:fieldValue('fullName'),previousSurname:fieldValue('previousSurname'),birthSurname:fieldValue('birthSurname'),
+      maritalStatus:fieldValue('maritalStatusOther')||fieldValue('maritalStatus'),citizenship:fieldValue('citizenshipOther')||fieldValue('citizenship'),
+      healthInsurance:fieldValue('healthInsurance'),personalNumber:fieldValue('personalNumber'),birthDate:fieldValue('birthDate'),birthPlace,
+      permanentAddress:fieldValue('permanentAddress'),permanentPostal:fieldValue('permanentPostal'),phone,
+      correspondenceAddress:fieldValue('correspondenceAddress'),correspondencePostal:fieldValue('correspondencePostal'),
+      dataBox:fieldValue('dataBox'),email:fieldValue('email'),bankAccount,
+      spouseName:fieldValue('spouseName'),spousePersonalNumber:fieldValue('spousePersonalNumber'),
+      children:readPeople('childrenRows'),dependents:readPeople('dependentRows'),education,educationYear:fieldValue('educationYear'),
+      drivingLicence:radio('drivingLicence'),executionInsolvency:radio('executionInsolvency'),
+      closePersonEmployed:radio('closePersonEmployed'),closePersonDetails:fieldValue('closePersonDetails'),
+      otherActivity:radio('otherActivity'),activityType:fieldValue('activityType'),pension:radio('pension'),
+      pensionType:fieldValue('pensionType'),pensionGrantedDate:fieldValue('pensionGrantedDate'),disability:radio('disability'),
+      disabilityType:fieldValue('disabilityType'),disabilityDecisionDate:fieldValue('disabilityDecisionDate'),
+      signaturePlace:fieldValue('signaturePlace'),signatureDate:fieldValue('signatureDate'),signatureMode:radio('signatureMode'),signatureData:signatureData()
+    };
+  };
+
+  const base64ToBytes=base64=>{
+    const binary=atob(String(base64||'').replace(/\s+/g,''));
+    const bytes=new Uint8Array(binary.length);
+    for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);
+    return bytes;
+  };
+  const loadPdfLogo=async()=>{
+    if(pdfLogoDataUrl)return pdfLogoDataUrl;
+    const response=await fetch(PDF_LOGO_DATA,{cache:'no-store'});
+    if(!response.ok)throw new Error('Nepodařilo se načíst logo pro PDF.');
+    pdfLogoDataUrl='data:image/png;base64,'+(await response.text()).replace(/\s+/g,'');
+    return pdfLogoDataUrl;
+  };
+  const loadWordTemplate=async()=>{
+    if(wordTemplateBytes)return wordTemplateBytes;
+    const responses=await Promise.all(WORD_TEMPLATE_PARTS.map(path=>fetch(path,{cache:'no-store'})));
+    if(responses.some(response=>!response.ok))throw new Error('Nepodařilo se načíst původní Word šablonu.');
+    const parts=await Promise.all(responses.map(response=>response.text()));
+    wordTemplateBytes=base64ToBytes(parts.join(''));
+    return wordTemplateBytes;
+  };
+
+  const safe=value=>escapeHtml(clean(value)||'Neuvedeno');
+  const pdfItem=(label,value,wide=false)=>`<div class="v12-pdf-item${wide?' v12-wide':''}"><span class="v12-pdf-label">${escapeHtml(label)}</span><span class="v12-pdf-value">${safe(value)}</span></div>`;
+  const peopleTable=(title,people)=>`<div class="v12-pdf-section">${escapeHtml(title)}</div><table class="v12-pdf-table"><thead><tr><th>Jméno a příjmení</th><th>Rodné číslo</th></tr></thead><tbody>${(people.length?people:[{}]).map(person=>`<tr><td>${safe(person.name)}</td><td>${safe(person.personalNumber)}</td></tr>`).join('')}</tbody></table>`;
+  const question=(label,answer,detail='')=>`<div class="v12-pdf-question"><strong>${escapeHtml(label)}</strong><span class="v12-pdf-answer">${safe(answer)}</span>${detail?`<div class="v12-pdf-detail">${safe(detail)}</div>`:''}</div>`;
+  const pdfHeader=logo=>`<header class="v12-pdf-header"><img src="${logo}" alt="Kooperativa"><div class="v12-pdf-header-title">Osobní dotazník<br>zaměstnance</div></header>`;
+  const pdfFooter=page=>`<footer class="v12-pdf-footer"><span>Kooperativa pojišťovna, a.s., Vienna Insurance Group</span><span>Strana ${page} / 3</span></footer>`;
+
+  const buildPdfStage=(data,logo)=>{
+    const legal=$('#legalCopy')?.innerHTML||'';
+    const stage=document.createElement('div');stage.className='v12-pdf-stage';
+    stage.innerHTML=`
+      <section class="v12-pdf-page">${pdfHeader(logo)}<div class="v12-pdf-body">
+        <h1 class="v12-pdf-doc-title">Osobní údaje zaměstnance</h1><p class="v12-pdf-subtitle">Údaje vyplněné v elektronickém osobním dotazníku.</p>
+        <div class="v12-pdf-section">Osobní údaje</div>
+        <div class="v12-pdf-grid">
+          ${pdfItem('Příjmení, jméno, titul',data.fullName,true)}
+          ${pdfItem('Předchozí příjmení',data.previousSurname)}${pdfItem('Rodné příjmení',data.birthSurname)}
+          ${pdfItem('Rodinný stav',data.maritalStatus)}${pdfItem('Státní občanství',data.citizenship)}
+          ${pdfItem('Zdravotní pojišťovna',data.healthInsurance,true)}
+          ${pdfItem('Rodné číslo',data.personalNumber)}${pdfItem('Den, měsíc, rok narození',data.birthDate)}
+          ${pdfItem('Místo narození / okres / stát',data.birthPlace,true)}
+          ${pdfItem('Trvalé bydliště',data.permanentAddress)}${pdfItem('PSČ',data.permanentPostal)}
+          ${pdfItem('Telefonní číslo',data.phone)}${pdfItem('ID datové schránky',data.dataBox)}
+          ${pdfItem('Korespondenční adresa',data.correspondenceAddress)}${pdfItem('PSČ korespondenční adresy',data.correspondencePostal)}
+          ${pdfItem('E-mailová adresa',data.email,true)}${pdfItem('Číslo bankovního účtu, kód banky',data.bankAccount,true)}
+        </div>
+        <div class="v12-pdf-note"><strong>Informace o použití soukromé e-mailové adresy pro pracovněprávní účely.</strong><br>Zaměstnancem uvedená soukromá e-mailová adresa je určena pro zasílání pracovněprávních dokumentů uvedených v § 21 odst. 1 zákona č. 262/2006 Sb., zákoník práce, ve znění pozdějších předpisů, jsou-li uzavřeny elektronicky.</div>
+      </div>${pdfFooter(1)}</section>
+      <section class="v12-pdf-page">${pdfHeader(logo)}<div class="v12-pdf-body">
+        ${peopleTable('Manžel / manželka',[{name:data.spouseName,personalNumber:data.spousePersonalNumber}].filter(person=>person.name||person.personalNumber))}
+        ${peopleTable('Děti',data.children)}
+        ${peopleTable('Ostatní vyživované osoby',data.dependents)}
+        <div class="v12-pdf-section">Ostatní údaje</div>
+        <div class="v12-pdf-grid">${pdfItem('Nejvyšší dokončené vzdělání / obor',data.education)}${pdfItem('V roce',data.educationYear)}</div>
+        ${question('Řidičský průkaz',data.drivingLicence)}
+        ${question('Je nebo byla vůči Vám vedena exekuce, insolvenční řízení?',data.executionInsolvency)}
+        ${question('Je v Kooperativě zaměstnána Vaše osoba blízká v přímé podřízenosti/nadřízenosti vůči Vám?',data.closePersonEmployed,data.closePersonDetails)}
+        ${question('Máte jinou výdělečnou činnost shodnou s předmětem činnosti zaměstnavatele?',data.otherActivity,data.activityType)}
+        ${question('Pobíráte důchod?',data.pension,[data.pensionType,data.pensionGrantedDate].filter(Boolean).join('; '))}
+        ${question('Máte zdravotní postižení?',data.disability,[data.disabilityType,data.disabilityDecisionDate].filter(Boolean).join('; '))}
+      </div>${pdfFooter(2)}</section>
+      <section class="v12-pdf-page">${pdfHeader(logo)}<div class="v12-legal-body"><div class="v12-legal-copy">${legal}</div></div>
+        <div class="v12-pdf-sign"><div>V<div class="v12-pdf-sign-line">${safe(data.signaturePlace)}</div></div><div>dne<div class="v12-pdf-sign-line">${safe(data.signatureDate)}</div></div><div>podpis<div class="v12-pdf-signature">${data.signatureData?`<img src="${data.signatureData}" alt="Podpis">`:''}</div></div></div>
+        ${pdfFooter(3)}
+      </section>`;
+    return stage;
+  };
+
+  const waitImages=root=>Promise.all($$('img',root).map(image=>image.complete&&image.naturalWidth?Promise.resolve():new Promise(resolve=>{image.onload=resolve;image.onerror=resolve;})));
+  const pdfFilename=name=>`Osobni_dotaznik_${(clean(name)||'zamestnanec').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'')}.pdf`;
+  const wordFilename=name=>pdfFilename(name).replace(/\.pdf$/i,'.docx');
+
+  let pdfState={blob:null,url:'',name:''};
+  const revokePdf=()=>{if(pdfState.url)URL.revokeObjectURL(pdfState.url);pdfState={blob:null,url:'',name:''};};
+
+  const validateOutput=()=>{
+    const form=$('#questionnaire');
+    const birth=$('#birthDate');
+    birth?.dispatchEvent(new Event('blur'));
+    const manualRequired=['maritalStatus','correspondenceAddress','correspondencePostal'];
+    let manualOk=true;
+    manualRequired.forEach(id=>{const input=$('#'+id);if(input&&!clean(input.value)){input.setCustomValidity('Toto pole je povinné.');setFieldError(input,'Toto pole je povinné.','required');manualOk=false;}else if(input){input.setCustomValidity('');setFieldError(input,'','required');}});
+    if(!manualOk||!form.checkValidity()){
+      form.reportValidity();
+      const first=$(':invalid',form);first?.scrollIntoView({behavior:'smooth',block:'center'});
+      return false;
+    }
+    return true;
+  };
+
+  const generatePdf=async()=>{
+    if(!validateOutput())throw new Error('Doplňte nebo opravte povinné údaje.');
