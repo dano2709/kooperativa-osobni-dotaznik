@@ -1,20 +1,17 @@
 # Kooperativa – osobní dotazník zaměstnance
 
-Interaktivní statická webová aplikace pro vyplnění osobního dotazníku a vytvoření PDF přímo v prohlížeči.
+Interaktivní webový formulář pro vyplnění osobních údajů zaměstnance a vytvoření PDF.
 
-## Funkce
+Aktuální funkce:
 
-- pětikrokový formulář s kontrolou údajů,
-- přidávání a odebírání dětí a vyživovaných osob,
-- podmíněná pole podle odpovědí ANO/NE,
-- datum ve formátu DD.MM.RRRR,
-- elektronický podpis kresbou nebo obrázkem, případně ruční podpis po vytištění,
-- náhled, stažení a tisk PDF ve vizuálním stylu Kooperativy.
-
-## Provoz
-
-Aplikace je čistě statická. Údaje formuláře se neposílají do GitHubu ani na aplikační server. PDF se vytváří v prohlížeči pomocí html2pdf.js.
-
-## GitHub Pages
-
-Workflow v `.github/workflows/pages.yml` publikuje obsah repozitáře na GitHub Pages. V nastavení repozitáře vyberte **Settings → Pages → Source: GitHub Actions**.
+- členěný formulář s validací,
+- rodinní příslušníci a dynamické řádky,
+- podmíněná pole ANO/NE,
+- podpis kreslením nebo ruční podpis po vytištění,
+- kontrolní souhrn,
+- generování, náhled, stažení a tisk PDF,
+- zdravotní pojišťovny s logy,
+- bankovní účet s nepovinným předčíslím,
+- vlastní rodinný stav,
+- seznam občanství s vlastním zadáním,
+- našeptávání českých adres přes Mapy.com REST API.
