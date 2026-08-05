@@ -1,0 +1,142 @@
+
+    if(typeof html2canvas!=='function')throw new Error('Knihovna pro vytvoření PDF se nenačetla.');
+    const JsPdf=window.jspdf?.jsPDF||window.jsPDF;
+    if(!JsPdf)throw new Error('Knihovna PDF se nenačetla.');
+    const data=collectData();
+    const logo=await loadPdfLogo();
+    const stage=buildPdfStage(data,logo);document.body.appendChild(stage);
+    try{
+      await document.fonts?.ready;await waitImages(stage);
+      const pdf=new JsPdf({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+      const pages=$$('.v12-pdf-page',stage);
+      for(let index=0;index<pages.length;index++){
+        const canvas=await html2canvas(pages[index],{scale:2,backgroundColor:'#fff',useCORS:true,logging:false,width:794,height:1123,windowWidth:794,windowHeight:1123,scrollX:0,scrollY:0});
+        if(index)pdf.addPage('a4','portrait');
+        pdf.addImage(canvas.toDataURL('image/jpeg',0.96),'JPEG',0,0,210,297,undefined,'FAST');
+      }
+      revokePdf();
+      const blob=pdf.output('blob');
+      pdfState={blob,url:URL.createObjectURL(blob),name:pdfFilename(data.fullName)};
+      return pdfState;
+    }finally{stage.remove();}
+  };
+
+  const loadPizZip=async()=>{
+    if(window.PizZip)return window.PizZip;
+    let lastError=null;
+    for(const src of PIZZIP_URLS){
+      try{
+        await new Promise((resolve,reject)=>{
+          const script=document.createElement('script');script.src=src;script.async=true;script.onload=resolve;script.onerror=()=>reject(new Error(`Nelze načíst ${src}`));document.head.appendChild(script);
+        });
+        if(window.PizZip)return window.PizZip;
+      }catch(error){lastError=error;}
+    }
+    throw lastError||new Error('Knihovna pro Word se nenačetla.');
+  };
+
+  const digits=value=>clean(value).replace(/\D/g,'').slice(0,10).split('');
+  const splitChildrenForWord=children=>{
+    if(children.length<=3)return [...children];
+    return [children[0],children[1],{
+      name:children.slice(2).map(person=>[person.name,person.personalNumber&&`(${person.personalNumber})`].filter(Boolean).join(' ')).join('; '),
+      personalNumber:''
+    }];
+  };
+  const toBase64=dataUrl=>String(dataUrl||'').split(',')[1]||'';
+  const triggerDownload=(blob,name)=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);};
+
+  const generateWord=async()=>{
+    if(!validateOutput())throw new Error('Doplňte nebo opravte povinné údaje.');
+    const PizZip=await loadPizZip();
+    const zip=new PizZip(await loadWordTemplate());
+    const data=collectData();
+    const children=splitChildrenForWord(data.children);
+    while(children.length<3)children.push({name:'',personalNumber:''});
+    const values={
+      FULL_NAME:data.fullName,PREVIOUS_SURNAME:data.previousSurname||'Neuvedeno',BIRTH_SURNAME:data.birthSurname||'Neuvedeno',
+      MARITAL_STATUS:data.maritalStatus,CITIZENSHIP:data.citizenship,HEALTH_INSURANCE:data.healthInsurance,BIRTH_DATE:data.birthDate,
+      BIRTH_PLACE:data.birthPlace,PERMANENT_ADDRESS:data.permanentAddress,PERMANENT_POSTAL:data.permanentPostal,PHONE:data.phone,
+      CORRESPONDENCE_ADDRESS:data.correspondenceAddress,CORRESPONDENCE_POSTAL:data.correspondencePostal,DATA_BOX:data.dataBox||'Neuvedeno',
+      EMAIL:data.email,BANK_ACCOUNT:data.bankAccount,SPOUSE_NAME:data.spouseName||'Neuvedeno',DEPENDENTS:data.dependents.length?data.dependents.map(person=>[person.name,person.personalNumber&&`(${person.personalNumber})`].filter(Boolean).join(' ')).join('; '):'Neuvedeno',
+      EDUCATION:data.education,EDUCATION_YEAR:data.educationYear||'Neuvedeno',DRIVING_LICENCE:data.drivingLicence,EXECUTION:data.executionInsolvency,
+      CLOSE_PERSON:data.closePersonEmployed,CLOSE_PERSON_DETAILS:data.closePersonDetails||'Neuvedeno',OTHER_ACTIVITY:data.otherActivity,
+      ACTIVITY_TYPE:data.activityType||'Neuvedeno',PENSION:data.pension,PENSION_TYPE:data.pensionType||'Neuvedeno',PENSION_DATE:data.pensionGrantedDate||'Neuvedeno',
+      DISABILITY:data.disability,DISABILITY_TYPE:data.disabilityType||'Neuvedeno',DISABILITY_DATE:data.disabilityDecisionDate||'Neuvedeno',
+      SIGN_PLACE:data.signaturePlace,SIGN_DATE:data.signatureDate,
+      CHILD1_NAME:children[0].name||'Neuvedeno',CHILD2_NAME:children[1].name||'Neuvedeno',CHILD3_NAME:children[2].name||'Neuvedeno'
+    };
+    const assignDigits=(prefix,value)=>{const list=digits(value);for(let i=0;i<10;i++)values[`${prefix}${i+1}`]=list[i]||'';};
+    assignDigits('PERSONAL_RC_',data.personalNumber);
+    assignDigits('SPOUSE_RC_',data.spousePersonalNumber);
+    assignDigits('CHILD1_RC_',children[0].personalNumber);
+    assignDigits('CHILD2_RC_',children[1].personalNumber);
+    assignDigits('CHILD3_RC_',children[2].personalNumber);
+
+    Object.keys(zip.files).filter(name=>/\.xml$|\.rels$/.test(name)).forEach(name=>{
+      let xml=zip.file(name)?.asText();if(typeof xml!=='string')return;
+      Object.entries(values).forEach(([key,value])=>{xml=xml.split(`@@${key}@@`).join(escapeXml(value));});
+      zip.file(name,xml);
+    });
+    if(data.signatureData){
+      const base64=toBase64(data.signatureData);
+      if(base64)zip.file('word/media/image2.png',base64,{base64:true});
+    }
+    const blob=zip.generate({type:'blob',compression:'DEFLATE',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    triggerDownload(blob,wordFilename(data.fullName));
+  };
+
+  const findOutput=(text)=>$$('button,a').find(element=>normalize(element.textContent).includes(normalize(text)));
+  const setupOutputs=()=>{
+    const create=findOutput('Vytvořit PDF')||findOutput('Vygenerovat PDF');
+    const preview=findOutput('Náhled PDF');
+    const download=findOutput('Stáhnout PDF');
+    const print=findOutput('Vytisknout');
+    const parent=create?.parentElement||$('.pdf-actions')||$('.actions');
+    if(!parent)return;
+    let word=$('#generateWordV12');
+    if(!word){word=document.createElement('button');word.type='button';word.id='generateWordV12';word.className='btn';word.textContent='Vygenerovat Word';parent.appendChild(word);}
+    let status=$('.v12-output-status',parent);
+    if(!status){status=document.createElement('div');status.className='v12-output-status';parent.appendChild(status);}
+    const setStatus=(message,error=false)=>{status.textContent=message;status.style.color=error?'#c5221f':'#00573f';};
+    if(create){
+      const syncDisabled=()=>{word.disabled=create.disabled;};syncDisabled();
+      new MutationObserver(syncDisabled).observe(create,{attributes:true,attributeFilter:['disabled']});
+    }
+    document.addEventListener('click',async event=>{
+      const target=event.target.closest('button,a');if(!target)return;
+      if(target===create){
+        event.preventDefault();event.stopImmediatePropagation();
+        const old=target.textContent;target.disabled=true;target.textContent='Vytvářím PDF…';setStatus('Vytvářím PDF…');
+        try{
+          const result=await generatePdf();
+          if(preview){preview.href=result.url;preview.target='_blank';preview.hidden=false;preview.style.display='';preview.classList.remove('hide','hidden');}
+          if(download){download.href=result.url;download.download=result.name;download.hidden=false;download.style.display='';download.classList.remove('hide','hidden');}
+          if(print){print.hidden=false;print.style.display='';print.classList.remove('hide','hidden');}
+          setStatus('PDF je připravené k náhledu, stažení nebo tisku.');
+        }catch(error){setStatus(error.message||'PDF se nepodařilo vytvořit.',true);console.error(error);}
+        finally{target.disabled=false;target.textContent=old;}
+      }else if(target===preview){
+        event.preventDefault();event.stopImmediatePropagation();
+        try{if(!pdfState.url)await generatePdf();window.open(pdfState.url,'_blank','noopener');}catch(error){setStatus(error.message,true);}
+      }else if(target===download){
+        event.preventDefault();event.stopImmediatePropagation();
+        try{if(!pdfState.url)await generatePdf();triggerDownload(pdfState.blob,pdfState.name);}catch(error){setStatus(error.message,true);}
+      }else if(target===print){
+        event.preventDefault();event.stopImmediatePropagation();
+        try{if(!pdfState.url)await generatePdf();const win=window.open(pdfState.url,'_blank');if(win)setTimeout(()=>win.print?.(),900);}catch(error){setStatus(error.message,true);}
+      }else if(target===word){
+        event.preventDefault();event.stopImmediatePropagation();
+        const old=word.textContent;word.disabled=true;word.textContent='Vytvářím Word…';setStatus('Vytvářím Word z původní dvoustránkové šablony…');
+        try{await generateWord();setStatus('Word byl vytvořen a stažen.');}
+        catch(error){setStatus(error.message||'Word se nepodařilo vytvořit.',true);console.error(error);}
+        finally{word.disabled=create?.disabled||false;word.textContent=old;}
+      }
+    },true);
+  };
+
+  waitForV11().then(()=>{
+    document.documentElement.dataset.appVersion='12';
+    addStyles();applyLimits();setupRequiredFields();setupBirthDateValidation();setupPhoneLayout();setupMunicipalitySuggest($('#signaturePlace'));setupOutputs();
+  }).catch(error=>console.error('Kooperativa v12:',error));
+})();
