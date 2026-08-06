@@ -56,7 +56,15 @@
     addStyles();replaceKnownCopy();removePdfControls();
     const message=confirmationMessage();
     const button=wordButton();
-    if(!message||!button)return false;
+    if(!button)return false;
+    const status=document.querySelector('.v12-output-status');
+    if(!message){
+      let holding=document.getElementById('v28WordHolding');
+      if(!holding){holding=document.createElement('div');holding.id='v28WordHolding';holding.hidden=true;document.body.appendChild(holding);}
+      if(button.parentElement!==holding)holding.appendChild(button);
+      if(status&&status.parentElement!==holding)holding.appendChild(status);
+      return false;
+    }
 
     let actions=document.getElementById('v28FinalWordActions');
     if(!actions){actions=document.createElement('div');actions.id='v28FinalWordActions';}
@@ -65,7 +73,6 @@
     }
     if(button.parentElement!==actions)actions.appendChild(button);
 
-    const status=document.querySelector('.v12-output-status');
     if(status&&status.parentElement!==actions)actions.appendChild(status);
 
     $$('button,a').filter(element=>element!==button&&normalize(element.textContent).includes('vygenerovat word')).forEach(element=>element.remove());
