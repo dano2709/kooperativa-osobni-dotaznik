@@ -1,0 +1,136 @@
+  const patchHealthInsurance=doc=>{
+    const code=insuranceCode();
+    if(!code)return;
+    const cell=localElements(doc,'tc').find(item=>normalize(item.textContent).includes('zdravotni pojistovna'));
+    if(!cell)return;
+    const paragraphs=directChildren(cell,'p');
+    const valueParagraph=paragraphs.find((paragraph,index)=>index>0&&clean(paragraph.textContent))||paragraphs[paragraphs.length-1];
+    const run=valueParagraph&&(localElements(valueParagraph,'r').find(item=>clean(item.textContent))||localElements(valueParagraph,'r')[0]);
+    if(run)setRunText(doc,run,code);
+  };
+
+  const patchDependents=doc=>{
+    const dependents=readDependents();
+    const rows=localElements(doc,'tr');
+    const rowIndex=rows.findIndex(item=>normalize(item.textContent).includes('ostatni vyzivovane osoby'));
+    if(rowIndex<0)return;
+    const row=rows[rowIndex];
+    const cells=directChildren(row,'tc');
+    if(cells.length<11)return;
+
+    const firstCell=cells[0];
+    const runs=localElements(firstCell,'r');
+    let valueRun=runs.find(run=>!normalize(run.textContent).includes('ostatni vyzivovane osoby')&&clean(run.textContent));
+    if(!valueRun)valueRun=runs[runs.length-1];
+
+    let value='Neuvedeno';
+    if(dependents.length===1)value=dependents[0].name||'Neuvedeno';
+    else if(dependents.length>1){
+      value=dependents.map(person=>[
+        person.name||'Neuvedeno',
+        person.personalNumber?`(${person.personalNumber})`:''
+      ].filter(Boolean).join(' ')).join('; ');
+    }
+    if(valueRun)setRunText(doc,valueRun,value);
+
+    let sourceCells=null;
+    for(let index=rowIndex-1;index>=0;index--){
+      const candidate=directChildren(rows[index],'tc');
+      const candidateText=normalize(rows[index].textContent);
+      if(candidate.length>=11&&!candidateText.includes('manzel')){sourceCells=candidate.slice(-10);break;}
+    }
+    if(!sourceCells)return;
+
+    const digits=dependents.length===1?dependents[0].personalNumber.replace(/\D/g,'').slice(0,10).split(''):[];
+    cells.slice(-10).forEach((cell,index)=>setCellTextLike(doc,cell,sourceCells[index],digits[index]||''));
+  };
+
+  const signatureIsPrintMode=()=>{
+    const value=normalize(document.querySelector('input[name="signatureMode"]:checked')?.value||'');
+    return value.includes('print')||value.includes('tisk');
+  };
+
+  const hasSignatureInk=()=>{
+    const canvas=document.getElementById('signatureCanvas')||document.getElementById('sigCanvas')||document.querySelector('canvas[id*="signature" i],canvas[id*="sig" i]');
+    if(!canvas)return false;
+    try{
+      const pixels=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,canvas.width,canvas.height).data;
+      for(let index=0;index<pixels.length;index+=4){
+        if(pixels[index+3]>20&&(pixels[index]<245||pixels[index+1]<245||pixels[index+2]<245))return true;
+      }
+    }catch(error){console.warn('Kontrola podpisu:',error);}
+    return false;
+  };
+
+  const patchSignature=doc=>{
+    if(!signatureIsPrintMode()&&hasSignatureInk())return;
+    const paragraph=[...localElements(doc,'p')].reverse().find(item=>normalize(item.textContent).includes('podpis'));
+    if(!paragraph)return;
+    const drawingRun=directChildren(paragraph,'r').find(run=>localElements(run,'drawing').length||localElements(run,'pict').length);
+    if(!drawingRun)return;
+    const replacement=create(doc,'r');
+    const rPr=firstDirect(drawingRun,'rPr');
+    if(rPr)replacement.appendChild(rPr.cloneNode(true));
+    const text=create(doc,'t');
+    text.textContent='……………………………….';
+    replacement.appendChild(text);
+    paragraph.replaceChild(replacement,drawingRun);
+  };
+
+  const patchGeneratedZip=zip=>{
+    const file=zip.file('word/document.xml');
+    if(!file)return;
+    const doc=new DOMParser().parseFromString(file.asText(),'application/xml');
+    if(doc.querySelector('parsererror'))throw new Error('Word šablonu se nepodařilo zpracovat.');
+    patchHealthInsurance(doc);
+    patchDependents(doc);
+    patchSignature(doc);
+    zip.file('word/document.xml',new XMLSerializer().serializeToString(doc));
+  };
+
+  const copyStatics=(source,target)=>{
+    for(const key of Reflect.ownKeys(source)){
+      if(['prototype','name','length'].includes(key))continue;
+      try{Object.defineProperty(target,key,Object.getOwnPropertyDescriptor(source,key));}catch(_){/* read-only */}
+    }
+    try{Object.setPrototypeOf(target,source);}catch(_){/* optional */}
+  };
+
+  const wrapPizZip=Original=>{
+    if(!Original||Original.__koopWrappedV21)return Original;
+    if(typeof Original!=='function')return Original;
+
+    if(!Original.prototype.__koopGenerateV21){
+      const originalGenerate=Original.prototype.generate;
+      Original.prototype.generate=function(...args){
+        try{patchGeneratedZip(this);}catch(error){console.error('Word šablona v21:',error);throw error;}
+        return originalGenerate.apply(this,args);
+      };
+      Original.prototype.__koopGenerateV21=true;
+    }
+
+    function WrappedPizZip(data,options){
+      const zip=new Original(data,options);
+      injectTemplate(zip);
+      return zip;
+    }
+    WrappedPizZip.prototype=Original.prototype;
+    copyStatics(Original,WrappedPizZip);
+    WrappedPizZip.__koopWrappedV21=true;
+    return WrappedPizZip;
+  };
+
+  const descriptor=Object.getOwnPropertyDescriptor(window,'PizZip');
+  if(window.PizZip){window.PizZip=wrapPizZip(window.PizZip);return;}
+  if(descriptor&&!descriptor.configurable)return;
+  let storedValue;
+  Object.defineProperty(window,'PizZip',{
+    configurable:true,
+    enumerable:true,
+    get(){return descriptor?.get?descriptor.get.call(window):storedValue;},
+    set(value){
+      const wrapped=wrapPizZip(value);
+      if(descriptor?.set)descriptor.set.call(window,wrapped);else storedValue=wrapped;
+    }
+  });
+})();
