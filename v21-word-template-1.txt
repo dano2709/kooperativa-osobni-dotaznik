@@ -1,0 +1,128 @@
+(()=>{
+  const TEMPLATE_DATA_PARTS=[
+    'assets/word-template-v21-xml-01.b64part?v=21',
+    'assets/word-template-v21-xml-02.b64part?v=21',
+    'assets/word-template-v21-xml-03.b64part?v=21',
+    'assets/word-template-v21-xml-04.b64part?v=21'
+  ];
+  const W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+  const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  const clean=value=>String(value??'').trim();
+  const localElements=(root,name)=>[...root.getElementsByTagName('*')].filter(node=>node.localName===name);
+  const directChildren=(root,name)=>[...root.children].filter(node=>node.localName===name);
+  const firstDirect=(root,name)=>directChildren(root,name)[0]||null;
+  const create=(doc,name)=>doc.createElementNS(W,`w:${name}`);
+
+  let templateEntries=null;
+  let templateLoadError=null;
+
+  const decodeTemplate=async encoded=>{
+    if(typeof DecompressionStream!=='function'){
+      throw new Error('Prohlížeč nepodporuje načtení Word šablony. Použijte aktuální Chrome, Edge nebo Firefox.');
+    }
+    const binary=atob(encoded.replace(/\s+/g,''));
+    const compressed=new Uint8Array(binary.length);
+    for(let index=0;index<binary.length;index++)compressed[index]=binary.charCodeAt(index);
+    const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(stream).text());
+  };
+
+  const templateReady=Promise.all(TEMPLATE_DATA_PARTS.map(path=>fetch(path,{cache:'no-store'}).then(response=>{
+    if(!response.ok)throw new Error(`Word šablona: HTTP ${response.status}`);
+    return response.text();
+  }))).then(parts=>decodeTemplate(parts.join(''))).then(entries=>{
+    templateEntries=entries;
+    return entries;
+  }).catch(error=>{
+    templateLoadError=error;
+    console.error('Načtení Word šablony v21:',error);
+    throw error;
+  });
+
+  // Kdyby uživatel klikl velmi rychle, počkáme na načtení šablony a kliknutí zopakujeme.
+  window.addEventListener('click',event=>{
+    const button=event.target?.closest?.('#generateWordV12');
+    if(!button||templateEntries)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    button.disabled=true;
+    const status=document.querySelector('.v12-output-status');
+    if(status)status.textContent='Načítám přesnou Word šablonu…';
+    templateReady.then(()=>{
+      button.disabled=false;
+      button.click();
+    }).catch(error=>{
+      button.disabled=false;
+      if(status){status.textContent=error.message||'Word šablonu se nepodařilo načíst.';status.style.color='#c5221f';}
+    });
+  },true);
+
+  const injectTemplate=zip=>{
+    if(templateLoadError)throw templateLoadError;
+    if(!templateEntries)throw new Error('Word šablona se ještě načítá. Zkuste tlačítko znovu.');
+    Object.entries(templateEntries).forEach(([path,content])=>zip.file(path,content));
+  };
+
+  const readDependents=()=>{
+    const container=document.getElementById('dependentRows');
+    if(!container)return [];
+    return [...container.querySelectorAll('.repeat-row')].map(row=>({
+      name:clean(row.querySelector('[data-row-field="name"]')?.value),
+      personalNumber:clean(row.querySelector('[data-row-field="personalNumber"]')?.value)
+    })).filter(person=>person.name||person.personalNumber);
+  };
+
+  const setRunText=(doc,run,value)=>{
+    let texts=localElements(run,'t');
+    if(!texts.length){
+      const text=create(doc,'t');
+      run.appendChild(text);
+      texts=[text];
+    }
+    texts[0].textContent=value;
+    if(/^\s|\s$/.test(value))texts[0].setAttribute('xml:space','preserve');
+    else texts[0].removeAttribute('xml:space');
+    for(let index=1;index<texts.length;index++)texts[index].textContent='';
+  };
+
+  const cloneParagraphAndRunFormatting=(doc,sourceCell,targetCell)=>{
+    const sourceParagraph=firstDirect(sourceCell,'p');
+    let targetParagraph=firstDirect(targetCell,'p');
+    if(!targetParagraph){targetParagraph=create(doc,'p');targetCell.appendChild(targetParagraph);}
+    const sourcePPr=sourceParagraph&&firstDirect(sourceParagraph,'pPr');
+    const targetPPr=firstDirect(targetParagraph,'pPr');
+    if(sourcePPr){
+      if(targetPPr)targetPPr.replaceWith(sourcePPr.cloneNode(true));
+      else targetParagraph.insertBefore(sourcePPr.cloneNode(true),targetParagraph.firstChild);
+    }
+    const sourceRun=sourceParagraph&&localElements(sourceParagraph,'r').find(run=>clean(run.textContent));
+    let targetRun=localElements(targetParagraph,'r').find(run=>clean(run.textContent))||localElements(targetParagraph,'r')[0];
+    if(!targetRun){targetRun=create(doc,'r');targetParagraph.appendChild(targetRun);}
+    const sourceRPr=sourceRun&&firstDirect(sourceRun,'rPr');
+    const targetRPr=firstDirect(targetRun,'rPr');
+    if(sourceRPr){
+      if(targetRPr)targetRPr.replaceWith(sourceRPr.cloneNode(true));
+      else targetRun.insertBefore(sourceRPr.cloneNode(true),targetRun.firstChild);
+    }
+    return targetRun;
+  };
+
+  const setCellTextLike=(doc,targetCell,sourceCell,value)=>{
+    const run=cloneParagraphAndRunFormatting(doc,sourceCell,targetCell);
+    setRunText(doc,run,value);
+    localElements(targetCell,'r').forEach(other=>{
+      if(other!==run)localElements(other,'t').forEach(text=>text.textContent='');
+    });
+  };
+
+  const insuranceCode=()=>{
+    const select=document.getElementById('healthInsurance');
+    const candidates=[select?.value,select?.selectedOptions?.[0]?.textContent,document.getElementById('healthInsuranceOther')?.value];
+    for(const raw of candidates){
+      const match=clean(raw).match(/(?:^|\D)(\d{3})(?:\D|$)/);
+      if(match)return match[1];
+    }
+    return '';
+  };
+
