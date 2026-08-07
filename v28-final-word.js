@@ -9,11 +9,12 @@
     const style=document.createElement('style');
     style.id='v28-final-word-style';
     style.textContent=`
-      #v28FinalWordActions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:18px 0 0}
+      #v28FinalWordActions{display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap;width:100%;margin:18px 0 4px}
       #v28FinalWordActions button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;border:0;border-radius:12px;background:#00843d!important;color:#fff!important;font-size:16px;font-weight:800;cursor:pointer}
       #v28FinalWordActions button:hover{background:#006f34!important}
       #v28FinalWordActions button:disabled{opacity:.65;cursor:wait}
-      #v28FinalWordActions .v12-output-status{width:auto!important;flex:1 1 260px;margin:0!important;min-height:20px}
+      #v28FinalWordActions .v12-output-status{width:auto!important;flex:0 1 auto;margin:0!important;min-height:20px;text-align:right}
+      #v28FinalWordActions .v12-output-status[hidden]{display:none!important}
     `;
     document.head.appendChild(style);
   };
@@ -40,6 +41,17 @@
     });
   };
 
+  const cleanStatus=status=>{
+    if(!status)return;
+    const text=normalize(status.textContent);
+    if(!text||text.includes('pdf')){
+      if(text.includes('pdf'))status.textContent='';
+      status.hidden=true;
+      return;
+    }
+    status.hidden=false;
+  };
+
   const confirmationMessage=()=>{
     const matches=$$('div,p,aside,section').filter(element=>normalize(element.textContent).includes('potvrzeni je dokonceno'));
     return matches.sort((a,b)=>clean(a.textContent).length-clean(b.textContent).length)[0]||null;
@@ -58,6 +70,7 @@
     const button=wordButton();
     if(!button)return false;
     const status=document.querySelector('.v12-output-status');
+    cleanStatus(status);
     if(!message){
       let holding=document.getElementById('v28WordHolding');
       if(!holding){holding=document.createElement('div');holding.id='v28WordHolding';holding.hidden=true;document.body.appendChild(holding);}
@@ -71,9 +84,8 @@
     if(actions.parentElement!==message.parentElement||actions.previousElementSibling!==message){
       message.insertAdjacentElement('afterend',actions);
     }
-    if(button.parentElement!==actions)actions.appendChild(button);
-
     if(status&&status.parentElement!==actions)actions.appendChild(status);
+    if(button.parentElement!==actions)actions.appendChild(button);
 
     $$('button,a').filter(element=>element!==button&&normalize(element.textContent).includes('vygenerovat word')).forEach(element=>element.remove());
     return true;
