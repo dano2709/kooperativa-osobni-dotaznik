@@ -9,12 +9,14 @@
     const style=document.createElement('style');
     style.id='v28-final-word-style';
     style.textContent=`
-      #v28FinalWordActions{display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap;width:100%;margin:18px 0 4px}
-      #v28FinalWordActions button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;border:0;border-radius:12px;background:#00843d!important;color:#fff!important;font-size:16px;font-weight:800;cursor:pointer}
+      #v28FinalWordActions{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:min(100%,520px);margin:18px 0 4px auto}
+      #v28FinalWordActions:before{content:'Dokument k vygenerování\\A\\A  W    Osobní dotazník zaměstnance                         ✓\\A        Word (.docx)';white-space:pre-wrap;display:block;padding:16px 18px;border:1px solid #d6e5dc;border-radius:14px;background:#fff;color:#26352d;font-size:14px;line-height:1.45;font-weight:700;box-shadow:0 4px 14px rgba(0,76,44,.06)}
+      #v28FinalWordActions button{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:54px;padding:13px 20px;border:0;border-radius:11px;background:#00843d!important;color:#fff!important;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(0,132,61,.16)}
       #v28FinalWordActions button:hover{background:#006f34!important}
       #v28FinalWordActions button:disabled{opacity:.65;cursor:wait}
-      #v28FinalWordActions .v12-output-status{width:auto!important;flex:0 1 auto;margin:0!important;min-height:20px;text-align:right}
+      #v28FinalWordActions .v12-output-status{width:100%!important;margin:0!important;min-height:20px;text-align:center}
       #v28FinalWordActions .v12-output-status[hidden]{display:none!important}
+      @media(max-width:720px){#v28FinalWordActions{width:100%;margin-left:0}}
     `;
     document.head.appendChild(style);
   };
